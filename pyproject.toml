@@ -1,0 +1,45 @@
+# @tear: 1
+[project]
+name = "tears"
+version = "0.1.0"
+description = "Tiered Enforcement, Authorship Review System — vibe-code responsibly."
+authors = [
+    { name = "Thillel", email = "35217356+Thillel@users.noreply.github.com" }
+]
+requires-python = ">=3.11"
+dependencies = [
+    "grimp>=3.4",
+    "pyyaml>=6.0",
+]
+
+[project.scripts]
+tears = "tears.cli:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "types-pyyaml>=6.0",
+    "ruff>=0.7",
+    "pyright>=1.1.380",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM", "RUF"]
+
+[tool.pyright]
+include = ["src", "tests"]
+pythonVersion = "3.11"
+typeCheckingMode = "strict"
+reportMissingTypeStubs = false
+
+[build-system]
+requires = ["uv_build>=0.10.5,<0.11.0"]
+build-backend = "uv_build"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"

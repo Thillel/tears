@@ -1,0 +1,6 @@
+OK    src/api/__init__.py (tear 1)
+OK    src/api/routes.py (tear 1)
+OK    src/auth/__init__.py (tear 0)
+OK    src/auth/tokens.py (tear 0)
+4 files checked, 0 failures, 0 warnings
+--- exit: 0 ---

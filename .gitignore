@@ -1,0 +1,26 @@
+# @tear: 2
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# Virtual environments
+.venv/
+venv/
+
+# Testing & tooling
+.pytest_cache/
+.ruff_cache/
+.pyright/
+.grimp_cache/
+.coverage
+htmlcov/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+*.swp

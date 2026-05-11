@@ -1,0 +1,5 @@
+directory_requirements:
+  src/auth: 0
+  src/api: 1
+imports:
+  source_roots: ["src"]
