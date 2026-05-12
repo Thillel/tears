@@ -1,10 +1,10 @@
 # @tear: 1
 [project]
-name = "tears"
+name = "tears-cli"
 version = "0.1.0"
 description = "Tiered Enforcement, Authorship Review System — vibe-code responsibly."
 authors = [
-    { name = "Thillel", email = "35217356+Thillel@users.noreply.github.com" }
+    { name = "Hillel Twersky", email = "35217356+Thillel@users.noreply.github.com" }
 ]
 requires-python = ">=3.11"
 dependencies = [
@@ -39,6 +39,10 @@ reportMissingTypeStubs = false
 [build-system]
 requires = ["uv_build>=0.10.5,<0.11.0"]
 build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "tears"
+module-root = "src"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
