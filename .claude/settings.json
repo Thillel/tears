@@ -4,7 +4,9 @@
       "WebFetch(domain:import-linter.readthedocs.io)",
       "WebFetch(domain:code.claude.com)",
       "Bash(make check)",
-      "Bash(make check 2>&1 | tail -25)"
+      "Bash(make check 2>&1 | tail -25)",
+      "Bash(make update-snapshots 2>&1 | tail -5)",
+      "Bash(make update-snapshots)"
 
     ]
   },

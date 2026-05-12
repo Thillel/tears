@@ -1,0 +1,8 @@
+OK    src/pkg/__init__.py (tear 0)
+OK    src/pkg/core.py (tear 0)
+FAIL  src/pkg/strict.py (tear 0)
+  - imports src/pkg/utils.py (tear 3): tear 0 cannot import from tear 3
+
+OK    src/pkg/utils.py (tear 3)
+4 files checked, 1 failure, 0 warnings
+--- exit: 1 ---

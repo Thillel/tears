@@ -13,8 +13,12 @@ this document wins.
 **v1 is:**
 - A single CLI command: `tears` (bare, no subcommand — matches mypy/pyright/black/flake8/pylint)
 - A `.tears.toml` config
-- A Claude Code `PostToolUse` hook
-- Python source files only (`.py`)
+- A Claude Code `PostToolUse` hook with **asymmetric scope**: replaces existing
+  `@tear` headers in *any* comment style (`#`, `//`, `--`, `<!--`, `/*`, `;`);
+  inserts new headers in many known file types (`.py`, `.js`, `.ts`, `.go`,
+  `.rs`, `.rb`, `.sh`, `.toml`, `.yml`, `.sql`, `.html`, `.md`, `.css`, ... plus
+  `Makefile`, `Dockerfile`, `.gitignore`, etc.)
+- **Scanning** Python source files only (`.py`) — multi-language enforcement is v2
 
 **v1 is not:**
 - `tears init`, `tears promote`, `tears report` — cut
@@ -329,7 +333,7 @@ A `PostToolUse` hook registered in `.claude/settings.json`.
       {
         "matcher": "Edit|Write|MultiEdit",
         "hooks": [
-          { "type": "command", "command": "python -m tears.hook" }
+          { "type": "command", "command": "uv run python -m tears.hook" }
         ]
       }
     ]
@@ -337,23 +341,36 @@ A `PostToolUse` hook registered in `.claude/settings.json`.
 }
 ```
 
-The hook reads the affected file path from the env var Claude Code provides (verify the
-exact name against current Claude Code hook docs at implementation time).
+The hook reads the affected file path from a JSON payload on stdin (`tool_input.file_path`).
 
 ### 3.2 Behavior
 
 For each affected file:
 
-1. If the file matches `exclude` patterns or isn't `.py` (v1), skip.
-2. If a valid `@tear` header exists in the first 5 lines, replace its value with `max_tear`.
-3. If multiple `@tear` headers exist, replace **all** of them with `max_tear`
-   (idempotent + collapses ambiguity).
-4. If no header exists, insert one. Insertion order:
+1. If the file matches `exclude` patterns or is missing, skip.
+2. **Replacement (universal).** Scan the first 5 lines for any `@tear: <digit>` in a
+   comment-like position (after optional indent, prefixed by non-alphanumeric comment
+   chars: `#`, `//`, `--`, `;`, `<!--`, `/*`, etc.). For every matching line, rewrite
+   the digit to `max_tear`. Idempotent, preserves indentation, comment markers,
+   trailing tokens (`-->`, `*/`), and line endings.
+3. **Insertion (type-specific).** If no header was found AND the file's extension is
+   in `COMMENT_STYLES` (or its name is in `FILENAME_STYLES` for extensionless files
+   like `Makefile`/`Dockerfile`/`.gitignore`), insert a new header in the right
+   comment style — `# @tear: 3` for hash-comment families, `// @tear: 3` for
+   slash-comment, `-- @tear: 3` for SQL/Lua, `<!-- @tear: 3 -->` for HTML/Markdown/XML,
+   `/* @tear: 3 */` for CSS, `; @tear: 3` for INI. Insertion position:
    - **After any shebang** (`#!...`) on line 1.
    - **After any encoding declaration** (`# -*- coding: ... -*-`). PEP 263 requires the
      declaration on line 1 or 2 — pushing it down breaks Python's encoding detection.
    - Otherwise as line 1.
-5. Write the file back.
+4. If no header was found AND the file type isn't known, **no-op**.
+5. Write the file back if changed.
+
+**Asymmetric scope is deliberate.** Replacement is cheap (one regex, no language
+knowledge needed) and works across every comment syntax. Insertion needs to know the
+comment marker per-extension — but the table is small and additive, so we cover ~50
+common dev file types. The *scanner* (`tears`) is still Python-only in v1 because
+resolving imports requires full language semantics; the *hook* doesn't need those.
 
 Idempotent: running the hook twice produces the same content as running it once.
 
@@ -500,6 +517,7 @@ implementations behind it. Everything else stays flat.
 | Repo root resolution (hook)? | `.git/` preferred over `.tears.toml` (nested configs are legitimate — e.g. test fixtures). |
 | Per-directory exemption? | `.notears` marker file. v1: not parsed — purely a human marker. Exclude patterns in root `.tears.toml` do the actual scan/hook exclusion. Future: tears may read `.notears` content (uses `# @tear: N` format) as directory-level attestation. |
 | Hook on duplicate headers? | Replace all (idempotent) |
+| Hook scope? | Asymmetric: replacement works across any comment style; insertion for ~50 known file types (line + block comment families, plus filename-based for Makefile/Dockerfile/.gitignore/etc.). |
 | Header insertion preserves shebang? | Yes |
 | Header insertion preserves encoding declaration? | Yes (PEP 263 — must stay on line 1 or 2) |
 | Excludes as laundering vector? | Accepted, documented |

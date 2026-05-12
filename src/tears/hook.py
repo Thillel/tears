@@ -13,6 +13,19 @@ Invocation:
 - Manually: `python -m tears.hook FILE [FILE ...]`. Useful for testing and
   bulk-demoting a list of files.
 
+Scope:
+- **Replacement is universal.** Any file with an existing `@tear: <digit>` header
+  in any line-comment style (`#`, `//`, `--`, `;`) or block-comment style
+  (`<!-- ... -->`, `/* ... */`) gets its digit rewritten to `max_tear`.
+- **Insertion is type-specific.** A file *without* a header gets a new one
+  inserted if its extension or filename is in `COMMENT_STYLES` /
+  `FILENAME_STYLES` — covers most common dev files: Python, JS/TS, Go, Rust,
+  C/C++/C#, Java, Kotlin, Swift, Ruby, Shell, TOML, YAML, INI, SQL, Lua,
+  HTML/XML/Markdown/SVG, CSS/SCSS, Makefile, Dockerfile, .gitignore, .env, etc.
+- **Multi-language scanning is still v2.** The hook covers many comment styles
+  cheaply; the *scanner* (`tears`) still only enforces import rules on `.py`.
+  See plan §1 for the asymmetric-scope rationale.
+
 Behavior:
 - **Matcher.** `.claude/settings.json` matches `Edit|Write|MultiEdit` only. Doesn't
   catch `NotebookEdit` or any future file-touching tool — extend the matcher if
@@ -22,9 +35,9 @@ Behavior:
   The stdin parser returns a 1-element list. A future bulk-edit tool with a list
   payload would need parser changes.
 - **Silent on bad input.** Empty stdin, malformed JSON, missing fields, paths
-  that don't exist, non-`.py` files, and excluded paths all return 0 with no
-  output. The hook never breaks Claude Code's flow.
-- **Broken `.tears.yml` is non-fatal.** Falls back to `TearsConfig()` defaults so
+  that don't exist, and excluded paths all return 0 with no output. The hook
+  never breaks Claude Code's flow.
+- **Broken `.tears.toml` is non-fatal.** Falls back to `TearsConfig()` defaults so
   a malformed config can't stop Claude from editing files. The `tears` CLI
   itself still hard-fails on a broken config — only the hook is lenient.
 """
@@ -40,41 +53,135 @@ from typing import Any, cast
 from tears.config import ConfigError, TearsConfig, load_config
 from tears.exclude import is_excluded
 
-# Loose match: anything that looks like a @tear header, even malformed values.
-# Captures the leading indentation so we preserve it when rewriting.
-HEADER_LIKE_RE = re.compile(r"^([ \t]*)#[ \t]*@tear:.*$")
+# Match a line whose first non-whitespace token looks like a comment marker
+# (one or more non-alphanumeric non-whitespace chars), followed by `@tear:` and
+# digits. Captures the full prefix and the digits separately so we can rewrite
+# the digit in place. The non-alphanumeric requirement keeps us from matching
+# `@tear: 1` inside a string literal like `x = "@tear: 1"`.
+LINE_HEADER_RE = re.compile(
+    r"^([ \t]*[^A-Za-z0-9\s]+[ \t]*@tear:[ \t]*)(\d+)"
+)
 SHEBANG_RE = re.compile(r"^#!")
 ENCODING_RE = re.compile(r"coding[=:]\s*[-\w.]+")
-LINE_ENDING_RE = re.compile(r"(\r?\n)$")
 
 MAX_LINES = 5
 
+# Extensions where we know how to *insert* a fresh header. Replacement works
+# universally; only insertion needs the comment markers. Each value is
+# (opener, closer) — `closer` is None for line comments (`#`, `//`, `--`, `;`)
+# and a string for block comments (`<!-- ... -->`, `/* ... */`).
+CommentStyle = tuple[str, str | None]
 
-def apply_hook(content: str, *, max_tear: int = 3) -> str:
+COMMENT_STYLES: dict[str, CommentStyle] = {
+    # Hash line comment
+    ".py": ("#", None),
+    ".rb": ("#", None),
+    ".pl": ("#", None),
+    ".sh": ("#", None),
+    ".bash": ("#", None),
+    ".zsh": ("#", None),
+    ".fish": ("#", None),
+    ".toml": ("#", None),
+    ".yml": ("#", None),
+    ".yaml": ("#", None),
+    ".r": ("#", None),
+    ".ex": ("#", None),
+    ".exs": ("#", None),
+    # Double-slash line comment
+    ".js": ("//", None),
+    ".mjs": ("//", None),
+    ".cjs": ("//", None),
+    ".ts": ("//", None),
+    ".tsx": ("//", None),
+    ".jsx": ("//", None),
+    ".go": ("//", None),
+    ".rs": ("//", None),
+    ".java": ("//", None),
+    ".kt": ("//", None),
+    ".swift": ("//", None),
+    ".c": ("//", None),
+    ".cpp": ("//", None),
+    ".cc": ("//", None),
+    ".cxx": ("//", None),
+    ".h": ("//", None),
+    ".hpp": ("//", None),
+    ".cs": ("//", None),
+    ".scala": ("//", None),
+    ".dart": ("//", None),
+    ".zig": ("//", None),
+    # Double-dash line comment
+    ".sql": ("--", None),
+    ".lua": ("--", None),
+    ".hs": ("--", None),
+    ".elm": ("--", None),
+    # Semicolon line comment
+    ".ini": (";", None),
+    ".cfg": (";", None),
+    ".clj": (";", None),
+    ".lisp": (";", None),
+    # HTML / XML / Markdown block comment
+    ".html": ("<!--", "-->"),
+    ".htm": ("<!--", "-->"),
+    ".xml": ("<!--", "-->"),
+    ".md": ("<!--", "-->"),
+    ".markdown": ("<!--", "-->"),
+    ".svg": ("<!--", "-->"),
+    # CSS block comment
+    ".css": ("/*", "*/"),
+    ".scss": ("/*", "*/"),
+    ".less": ("/*", "*/"),
+}
+
+# Extensionless files keyed by name. Looked up only when `extension` is empty
+# or unknown.
+FILENAME_STYLES: dict[str, CommentStyle] = {
+    "Makefile": ("#", None),
+    "Dockerfile": ("#", None),
+    "Rakefile": ("#", None),
+    "Gemfile": ("#", None),
+    ".gitignore": ("#", None),
+    ".gitattributes": ("#", None),
+    ".dockerignore": ("#", None),
+    ".env": ("#", None),
+    ".notears": ("#", None),
+}
+
+
+def apply_hook(
+    content: str,
+    *,
+    max_tear: int = 3,
+    extension: str = ".py",
+    filename: str = "",
+) -> str:
     """Return `content` with the `@tear` header rewritten to `max_tear`.
 
-    - Replaces *every* `@tear`-looking line in the first 5 lines (idempotent +
-      collapses any duplicates to a consistent value).
-    - If no header is present, inserts one after any shebang and any PEP 263
-      encoding declaration. Otherwise at line 1.
-    - Preserves indentation and line endings of existing headers.
+    Two steps:
+    1. **Replacement (universal).** Scan the first 5 lines for any `@tear: <digit>`
+       in a comment-like position. Replace each digit with `max_tear`. Preserves
+       indentation, comment markers, trailing tokens (`-->`, `*/`), and line
+       endings.
+    2. **Insertion (type-specific).** If no header was found AND we know the
+       comment syntax for the file (looked up by `extension` then `filename`),
+       insert a new header. Insertion respects shebangs always; PEP 263 encoding
+       declarations are also respected (universally — they look like `# coding:
+       utf-8` and similar magic-comment patterns exist outside Python too).
     """
     lines = content.splitlines(keepends=True)
-    header_indices = [
-        i
-        for i, line in enumerate(lines[:MAX_LINES])
-        if HEADER_LIKE_RE.match(line.rstrip("\r\n"))
-    ]
 
-    if header_indices:
-        for idx in header_indices:
-            line = lines[idx]
-            ending_match = LINE_ENDING_RE.search(line)
-            ending = ending_match.group(1) if ending_match else ""
-            indent_match = HEADER_LIKE_RE.match(line.rstrip("\r\n"))
-            indent = indent_match.group(1) if indent_match else ""
-            lines[idx] = f"{indent}# @tear: {max_tear}{ending}"
+    replaced = False
+    for i, line in enumerate(lines[:MAX_LINES]):
+        new_line, n = LINE_HEADER_RE.subn(rf"\g<1>{max_tear}", line, count=1)
+        if n:
+            lines[i] = new_line
+            replaced = True
+
+    if replaced:
         return "".join(lines)
+
+    style = _resolve_style(extension, filename)
+    if style is None:
+        return content
 
     insert_at = 0
     if lines and SHEBANG_RE.match(lines[0]):
@@ -83,8 +190,25 @@ def apply_hook(content: str, *, max_tear: int = 3) -> str:
         insert_at += 1
 
     ending = _detect_line_ending(lines)
-    lines.insert(insert_at, f"# @tear: {max_tear}{ending}")
+    lines.insert(insert_at, _format_header(style, max_tear) + ending)
     return "".join(lines)
+
+
+def _resolve_style(extension: str, filename: str) -> CommentStyle | None:
+    """Look up the comment style for a file. Extension wins; filename is a
+    fallback for extensionless files (Makefile, Dockerfile, .gitignore)."""
+    style = COMMENT_STYLES.get(extension.lower())
+    if style is not None:
+        return style
+    return FILENAME_STYLES.get(filename)
+
+
+def _format_header(style: CommentStyle, max_tear: int) -> str:
+    """Render an `@tear: N` header in the appropriate comment style."""
+    opener, closer = style
+    if closer is None:
+        return f"{opener} @tear: {max_tear}"
+    return f"{opener} @tear: {max_tear} {closer}"
 
 
 def process_file(
@@ -94,13 +218,19 @@ def process_file(
     exclude: list[str],
     repo_root: Path,
 ) -> bool:
-    """Apply the hook to a single file. Returns True iff the file was modified."""
-    if not path.is_file() or path.suffix != ".py":
+    """Apply the hook to a single file. Returns True iff the file was modified.
+
+    Excluded paths and missing files are silently skipped. The decision about
+    *what* to do with the file (replace / insert / no-op) lives in `apply_hook`.
+    """
+    if not path.is_file():
         return False
     if is_excluded(path, repo_root, exclude):
         return False
     content = path.read_text()
-    new_content = apply_hook(content, max_tear=max_tear)
+    new_content = apply_hook(
+        content, max_tear=max_tear, extension=path.suffix, filename=path.name
+    )
     if new_content == content:
         return False
     path.write_text(new_content)
@@ -167,10 +297,9 @@ def _paths_from_stdin() -> list[Path]:
 def _find_repo_root(start: Path) -> Path:
     """Walk up from `start` for the repo root. Fall back to cwd.
 
-    `.git/` wins over `.tears.yml` because nested `.tears.yml` files exist
-    legitimately (test fixtures, monorepo subprojects). The canonical repo
-    marker is `.git/`. Only fall back to `.tears.yml` for repos that haven't
-    been git-init'd yet.
+    `.git/` wins over `.tears.toml` because nested configs exist legitimately
+    (test fixtures, monorepo subprojects). The canonical repo marker is `.git/`.
+    Only fall back to `.tears.toml` for repos that haven't been git-init'd yet.
     """
     here = start.resolve()
     if here.is_file():
@@ -180,7 +309,7 @@ def _find_repo_root(start: Path) -> Path:
         if (ancestor / ".git").exists():
             return ancestor
     for ancestor in ancestors:
-        if (ancestor / ".tears.yml").exists():
+        if (ancestor / ".tears.toml").exists():
             return ancestor
     return Path.cwd()
 

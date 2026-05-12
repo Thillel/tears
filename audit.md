@@ -53,25 +53,23 @@ missing-header (warn + error), malformed config.
 
 ## Gaps — specified by plan, not yet implemented
 
-1. **9 more fixtures.** Plan §4.2 lists 15. We have 01–05 + 15. Missing:
-   - `06_stdlib_ignored` — confirms `import os` doesn't crash anything
-   - `07_relative_imports` — `from . import x`, `from ..pkg import y`
-   - `08_submodule_resolution` — `from foo import bar` where `bar` is a file
-   - `09_island_rules` — custom `import_rules` islands
-   - `10_strict_rules` — `import_rules` with each tier importing only from itself
-   - `11_six_tier_system` — custom `max_tear`
-   - `12_excludes` — file matching `exclude` is invisible to scan
-   - `13_excluded_target_skipped` — imports to excluded files don't fail
-   - `14_path_segment_matching` — `src/auth` doesn't match `src/authentic/foo.py`
+1. **`test_grimp_builder.py` missing.** The adapter (sys.path injection,
+   `_build_module_index`, exclude wrapper, glob translation with `**`, multi-package
+   `build_graph(*pkgs)`) is only covered implicitly via the snapshot fixtures.
+   Plan §4.1 specifies direct tests.
 
-2. **`test_grimp_builder.py` missing.** The adapter (sys.path injection, `_build_module_index`,
-   exclude wrapper, glob translation with `**`, multi-package `build_graph(*pkgs)`) is
-   only covered implicitly via the snapshot fixtures. Plan §4.1 specifies direct tests.
-
-3. **`tears file.py`** (single-file scan) is untested and almost certainly broken — the
+2. **`tears file.py`** (single-file scan) is untested and almost certainly broken — the
    CLI passes any path to `grimp.build_graph(*package_names)`, which expects package
    names rooted in source_roots. Plan §2.7 listed it as "TBD whether useful." Either
    implement (per-file mini-check that bypasses grimp) or remove from docs.
+
+**Recently closed (since 2026-05-11):**
+- All 15 fixtures from plan §4.2 are now in place. `08_submodule_resolution` confirms
+  grimp resolves `from pkg import internal` to the submodule when it exists — proves
+  the X.Y ambiguity worry was unfounded.
+- Hook now demotes existing headers in **any comment style** (not just `.py`). The
+  earlier "non-`.py` files have manual headers the hook never touches" gap is gone.
+  Insertion stays `.py`-only — see plan §3 for the asymmetric-scope rationale.
 
 ---
 
@@ -82,8 +80,8 @@ missing-header (warn + error), malformed config.
 - **`.notears` marker** at each fixture root. v1: pure human marker (tier inside as
   `# @tear: N` comment). Forward-compatible: future tears versions can read these as
   directory-level attestation. Recorded in plan §7.
-- **`TEARS_UPDATE_SNAPSHOTS=1`** env var for regenerating `expected.txt`. The right
-  workflow.
+- **`make update-snapshots`** wraps `TEARS_UPDATE_SNAPSHOTS=1 uv run pytest tests/scan`
+  so regen is one command. The right workflow.
 - **Exit code 2 for config errors** (0 clean, 1 violations, 2 config). Recorded in plan §7.
 - **`_find_repo_root` prefers `.git/`** so the hook can't misidentify a fixture as the
   repo root. Recorded in plan §7.

@@ -1,0 +1,5 @@
+# @tear: 3
+max_tear = 5
+
+[imports]
+source_roots = ["src"]

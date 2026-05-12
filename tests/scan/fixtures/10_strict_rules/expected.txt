@@ -1,0 +1,8 @@
+OK    src/api/__init__.py (tear 1)
+FAIL  src/api/routes.py (tear 1)
+  - imports src/auth/tokens.py (tear 0): tear 1 cannot import from tear 0
+
+OK    src/auth/__init__.py (tear 0)
+OK    src/auth/tokens.py (tear 0)
+4 files checked, 1 failure, 0 warnings
+--- exit: 1 ---

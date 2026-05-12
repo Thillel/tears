@@ -1,0 +1,7 @@
+OK    src/pkg/__init__.py (tear 0)
+OK    src/pkg/internal.py (tear 3)
+FAIL  src/pkg/main.py (tear 0)
+  - imports src/pkg/internal.py (tear 3): tear 0 cannot import from tear 3
+
+3 files checked, 1 failure, 0 warnings
+--- exit: 1 ---

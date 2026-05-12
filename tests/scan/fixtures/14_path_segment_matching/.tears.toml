@@ -1,0 +1,7 @@
+# @tear: 3
+
+[directory_requirements]
+"src/auth" = 0
+
+[imports]
+source_roots = ["src"]

@@ -1,0 +1,5 @@
+# @tear: 3
+exclude = ["**/*.generated.py"]
+
+[imports]
+source_roots = ["src"]

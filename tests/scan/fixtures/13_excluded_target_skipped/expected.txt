@@ -1,0 +1,4 @@
+OK    src/api/__init__.py (tear 0)
+OK    src/api/routes.py (tear 0)
+2 files checked, 0 failures, 0 warnings
+--- exit: 0 ---

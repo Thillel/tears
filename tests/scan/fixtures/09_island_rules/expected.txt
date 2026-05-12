@@ -1,0 +1,8 @@
+OK    src/a/__init__.py (tear 0)
+FAIL  src/a/x.py (tear 0)
+  - imports src/b/y.py (tear 2): tear 0 cannot import from tear 2
+
+OK    src/b/__init__.py (tear 2)
+OK    src/b/y.py (tear 2)
+4 files checked, 1 failure, 0 warnings
+--- exit: 1 ---
