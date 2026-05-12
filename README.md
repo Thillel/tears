@@ -33,10 +33,52 @@ def verify(token: str) -> str:
 ## Status
 
 Early. v1 is Python-only and scan-only (no `init` / `promote` / `report`
-subcommands). Not yet on PyPI. Claude Code hook not implemented yet.
+subcommands). Not yet on PyPI.
 See [`plan.md`](./plan.md) for the v1 scope and
 roadmap, [`spec.md`](./spec.md) for the broader vision, and
 [`test-spec.md`](./test-spec.md) for the test design.
+
+## Hooks
+
+`tears` ships an auto-demotion hook that rewrites `@tear: N` to `@tear: 3` (or
+inserts the header if missing) after every AI tool edit. This is the enforcement
+backstop — a human must consciously re-promote the tier.
+
+### Claude Code
+
+Copy the `hooks` block into your `.claude/settings.json`:
+
+```json
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv run python -m tears.hook"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+The hook reads `{"tool_input": {"file_path": "..."}}` from stdin. See
+[`src/tears/hook.py`](./src/tears/hook.py) for details.
+In the future this can become a plugin.
+
+### OpenCode
+
+Place `.opencode/plugins/tears-hook.ts` in the repo root (already done in this
+repo). OpenCode auto-loads plugins from this directory — no config needed. The
+plugin intercepts `edit`, `write`, and `apply_patch` tool calls and passes the
+affected file paths to `tears.hook` via CLI args.
+
+Manual editor changes are untouched by both hooks — only AI tool calls trigger
+the demotion.
 
 ## Try it locally
 
@@ -47,15 +89,14 @@ uv sync
 uv run tears path/to/your/repo
 ```
 
-Add a `.tears.yml` at the repo root:
+Add a `.tears.toml` at the repo root:
 
-```yaml
+```toml
 directory_requirements:
   src/auth: 0
   src/api: 1
-imports:
-  source_roots: ["src"]
-missing_header: warn   # or "error"
+imports = { source_roots = ["src"] }
+missing_header = "warn"  # or "error"
 ```
 
 ## Development
