@@ -6,7 +6,8 @@ copies the fixture into a temp dir (so tests can't mutate fixtures), runs the
 bare `tears` CLI against it, and compares the output + exit code against
 `expected.txt`.
 
-Snapshot format: literal stdout, followed by `--- exit: N ---` on its own line.
+Snapshot format: literal stdout, then (if non-empty) `--- stderr ---` followed by
+stderr, then `--- exit: N ---` on its own line.
 
 Regenerate by re-saving expected.txt or with `TEARS_UPDATE_SNAPSHOTS=1`.
 """
@@ -46,7 +47,8 @@ def test_fixture(fixture: str, tmp_path: Path, capsys: pytest.CaptureFixture[str
 
     exit_code = cli_main([str(work)])
     captured = capsys.readouterr()
-    actual = f"{captured.out}{EXIT_MARKER} {exit_code} ---\n"
+    stderr_block = f"--- stderr ---\n{captured.err}" if captured.err else ""
+    actual = f"{captured.out}{stderr_block}{EXIT_MARKER} {exit_code} ---\n"
 
     if os.environ.get("TEARS_UPDATE_SNAPSHOTS"):
         expected_path.write_text(actual)

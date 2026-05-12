@@ -1,0 +1,9 @@
+# @tear: 2
+# Repo's own tears config. Excludes the snapshot-test fixtures so neither
+# `tears` nor the Claude hook treats their intentional tier headers as real
+# attestations.
+
+exclude = ["tests/scan/fixtures/**"]
+
+[imports]
+source_roots = ["src"]

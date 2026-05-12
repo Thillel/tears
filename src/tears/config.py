@@ -1,20 +1,19 @@
 # @tear: 3
-"""`.tears.yml` parsing and validation."""
+"""`.tears.toml` parsing and validation."""
 
 from __future__ import annotations
 
+import tomllib
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, cast
 
-import yaml
-
-CONFIG_FILENAME = ".tears.yml"
+CONFIG_FILENAME = ".tears.toml"
 MISSING_HEADER_VALUES = ("warn", "error")
 
 
 class ConfigError(ValueError):
-    """Raised when `.tears.yml` is malformed or fails schema validation."""
+    """Raised when `.tears.toml` is malformed or fails schema validation."""
 
 
 @dataclass(frozen=True)
@@ -22,7 +21,7 @@ class TearsConfig:
     """Validated, resolved tears configuration.
 
     `directory_requirements` keys are normalized (trailing slashes stripped).
-    `import_rules` is the raw, possibly-partial mapping from the YAML; use
+    `import_rules` is the raw, possibly-partial mapping; use
     `resolved_import_rules()` to get the full per-tier allow-set with defaults filled in.
     """
 
@@ -75,9 +74,9 @@ class TearsConfig:
 
 
 def load_config(repo_root: Path) -> TearsConfig:
-    """Load `.tears.yml` from `repo_root`. Missing file => defaults.
+    """Load `.tears.toml` from `repo_root`. Missing file => defaults.
 
-    Malformed YAML or a schema failure raises `ConfigError` with a clear message
+    Malformed TOML or a schema failure raises `ConfigError` with a clear message
     naming the file and the problem.
     """
     config_path = repo_root / CONFIG_FILENAME
@@ -85,16 +84,11 @@ def load_config(repo_root: Path) -> TearsConfig:
         return TearsConfig()
 
     try:
-        raw: Any = yaml.safe_load(config_path.read_text())
-    except yaml.YAMLError as exc:
-        raise ConfigError(f"{config_path}: malformed YAML: {exc}") from exc
+        raw = tomllib.loads(config_path.read_text())
+    except tomllib.TOMLDecodeError as exc:
+        raise ConfigError(f"{CONFIG_FILENAME}: malformed TOML: {exc}") from exc
 
-    if raw is None:
-        return TearsConfig()
-    if not isinstance(raw, dict):
-        raise ConfigError(f"{config_path}: top level must be a mapping, got {type(raw).__name__}")
-
-    return _from_mapping(cast(dict[str, Any], raw), source=str(config_path))
+    return _from_mapping(raw, source=CONFIG_FILENAME)
 
 
 def _from_mapping(raw: dict[str, Any], *, source: str) -> TearsConfig:
@@ -141,24 +135,30 @@ def _from_mapping(raw: dict[str, Any], *, source: str) -> TearsConfig:
                 source_roots.append(item)
             kwargs["source_roots"] = source_roots
 
-    if "import_rules" in raw and raw["import_rules"] is not None:
+    if "import_rules" in raw:
         ir_raw = _require_mapping(raw["import_rules"], "import_rules", source)
         rules: dict[int, list[int]] = {}
         for key, value in ir_raw.items():
-            if not isinstance(key, int) or isinstance(key, bool):
-                raise ConfigError(f"{source}: import_rules keys must be ints, got {key!r}")
+            # TOML keys are always strings; convert to int.
+            try:
+                key_int = int(cast(str, key))
+            except (ValueError, TypeError) as exc:
+                raise ConfigError(
+                    f"{source}: import_rules keys must be integer-valued strings, got {key!r}"
+                ) from exc
             if not isinstance(value, list):
                 raise ConfigError(
-                    f"{source}: import_rules[{key}] must be a list, got {type(value).__name__}"
+                    f"{source}: import_rules[{key_int}] must be a list, "
+                    f"got {type(value).__name__}"
                 )
             allowed: list[int] = []
             for entry in cast(list[Any], value):
                 if not isinstance(entry, int) or isinstance(entry, bool):
                     raise ConfigError(
-                        f"{source}: import_rules[{key}] entries must be ints, got {entry!r}"
+                        f"{source}: import_rules[{key_int}] entries must be ints, got {entry!r}"
                     )
                 allowed.append(entry)
-            rules[key] = allowed
+            rules[key_int] = allowed
         kwargs["import_rules"] = rules
 
     if "missing_header" in raw:

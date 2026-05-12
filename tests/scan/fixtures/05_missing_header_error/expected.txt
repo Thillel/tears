@@ -1,0 +1,6 @@
+OK    src/api/__init__.py (tear 1)
+FAIL  src/api/routes.py
+  - missing @tear header (treated as tear 3)
+
+2 files checked, 1 failure, 0 warnings
+--- exit: 1 ---

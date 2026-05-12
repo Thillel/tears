@@ -9,7 +9,6 @@ authors = [
 requires-python = ">=3.11"
 dependencies = [
     "grimp>=3.4",
-    "pyyaml>=6.0",
 ]
 
 [project.scripts]
@@ -18,7 +17,6 @@ tears = "tears.cli:main"
 [dependency-groups]
 dev = [
     "pytest>=8.0",
-    "types-pyyaml>=6.0",
     "ruff>=0.7",
     "pyright>=1.1.380",
 ]
@@ -26,12 +24,14 @@ dev = [
 [tool.ruff]
 line-length = 100
 target-version = "py311"
+extend-exclude = ["tests/scan/fixtures"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "SIM", "RUF"]
 
 [tool.pyright]
 include = ["src", "tests"]
+exclude = ["tests/scan/fixtures"]
 pythonVersion = "3.11"
 typeCheckingMode = "strict"
 reportMissingTypeStubs = false

@@ -12,8 +12,6 @@ Builds the graph by:
 from __future__ import annotations
 
 import contextlib
-import fnmatch
-import re
 import sys
 from collections.abc import Iterable
 from pathlib import Path
@@ -22,6 +20,7 @@ from typing import Any, cast
 import grimp
 
 from tears.config import TearsConfig
+from tears.exclude import is_excluded
 from tears.header import parse_tear_level
 
 
@@ -88,7 +87,7 @@ def build_grimp_graph(repo_root: Path, config: TearsConfig) -> GrimpImportGraph:
 
     files: dict[Path, int | None] = {}
     for file_path in module_to_file.values():
-        if _is_excluded(file_path, repo_root, config.exclude):
+        if is_excluded(file_path, repo_root, config.exclude):
             continue
         files[file_path] = parse_tear_level(file_path.read_text(), max_tear=config.max_tear)
 
@@ -125,26 +124,3 @@ def _build_module_index(package_roots: dict[str, Path]) -> dict[str, Path]:
             module = ".".join((pkg_name, *parts)) if parts else pkg_name
             index[module] = py_file.resolve()
     return index
-
-
-def _is_excluded(file_path: Path, repo_root: Path, patterns: list[str]) -> bool:
-    if not patterns:
-        return False
-    try:
-        rel = file_path.relative_to(repo_root).as_posix()
-    except ValueError:
-        return False
-    return any(_match_glob(rel, p) for p in patterns)
-
-
-def _match_glob(path: str, pattern: str) -> bool:
-    """fnmatch with `**` support: `**` matches across path separators."""
-    regex = re.compile(_glob_to_regex(pattern))
-    return regex.fullmatch(path) is not None
-
-
-def _glob_to_regex(pattern: str) -> str:
-    placeholder = "\x00DOUBLESTAR\x00"
-    p = pattern.replace("**", placeholder)
-    p = fnmatch.translate(p).rstrip("\\Z")
-    return p.replace(re.escape(placeholder), ".*")

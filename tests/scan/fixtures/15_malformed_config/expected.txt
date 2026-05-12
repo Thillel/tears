@@ -1,0 +1,3 @@
+--- stderr ---
+error: .tears.toml: malformed TOML: Invalid value (at line 2, column 12)
+--- exit: 2 ---

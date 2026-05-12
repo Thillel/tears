@@ -3,7 +3,6 @@
 # tears
 
 **Tiered Enforcement, Authorship Review System.**
-*No tears. No tiers. Gentle on your codebase.*
 *Vibe-Code Responsibly*
 
 `tears` is a small linter for repos where humans and AI tools both write code.

@@ -12,7 +12,7 @@ this document wins.
 
 **v1 is:**
 - A single CLI command: `tears` (bare, no subcommand — matches mypy/pyright/black/flake8/pylint)
-- A `.tears.yml` config
+- A `.tears.toml` config
 - A Claude Code `PostToolUse` hook
 - Python source files only (`.py`)
 
@@ -248,23 +248,32 @@ A file's tier must be `<=` the requirement of its longest-prefix-matching direct
 
 ### 2.6 Config loading
 
-`.tears.yml` at repo root. All fields optional.
+`.tears.toml` at repo root. All fields optional. Parsed with stdlib `tomllib` (no
+third-party deps).
 
-```yaml
-max_tear: 3
-directory_requirements: {}
-exclude: []
-imports:
-  source_roots: ["."]
-import_rules: null            # null = default "<=" rule
-missing_header: warn          # warn | error
+```toml
+max_tear = 3
+exclude = []
+missing_header = "warn"          # "warn" | "error"
+
+[directory_requirements]
+# "src/auth" = 0
+
+[imports]
+source_roots = ["."]
+
+# Optional — omit for the default "<=" rule. TOML keys are strings; we convert
+# integer-valued strings to ints at load time.
+# [import_rules]
+# "1" = [0, 1, 2]
 ```
 
 **Validation at load time:**
 - `max_tear >= 1`
 - All tier ints in `directory_requirements` and `import_rules` in `0..max_tear`
 - Every tier in `import_rules` includes itself
-- Malformed YAML or schema failure → **hard fail with a clear error naming the file and
+- `import_rules` keys must be integer-valued strings (`"0"`, `"1"`, etc.)
+- Malformed TOML or schema failure → **hard fail with a clear error naming the file and
   the problem.** Never silently fall back to defaults.
 
 ### 2.7 `tears` behavior
@@ -369,7 +378,7 @@ passes its torture suite" backstop.
 | `test_header.py` | `parse_tear_level` over malformed headers, comment styles, position in first 5 lines, whitespace tolerance, in-string false positives, multiple headers, custom `max_tear` |
 | `test_rules.py` | `can_import` (default matrix + custom rules: relaxed, islands, strict, open) and `check_directory_requirement` (exact, exceeds, fails, longest-prefix, path-segment matching, trailing slashes) |
 | `test_checker.py` | The checker against an **in-memory fake graph** — assert violations from constructed node/edge sets. No filesystem, no parsing. Covers tier rule violations, directory violations, missing-header (warn vs error), excludes, custom `max_tear`. |
-| `test_config.py` | `load_config` — defaults, YAML parsing, validation errors (`max_tear` bounds, tier references, self-import, malformed YAML), partial `import_rules` filling defaults |
+| `test_config.py` | `load_config` — defaults, TOML parsing, validation errors (`max_tear` bounds, tier references, self-import, malformed TOML, non-integer rule keys), partial `import_rules` filling defaults |
 | `test_hook.py` | `apply_hook` — replace existing, insert when missing, preserve shebang, preserve encoding declaration, idempotency, custom `max_tear`, multiple-header collapse |
 | `test_grimp_builder.py` | The grimp adapter — verifies the `ImportGraph` Protocol is satisfied, file-path mapping is correct, exclude wrapper applies, multi-package repos work via `grimp.build_graph(*pkgs)`. Most semantic correctness is grimp's responsibility. |
 
@@ -386,7 +395,7 @@ tests/scan/
 ├── test_scan.py
 └── fixtures/
     ├── 01_clean_repo/
-    │   ├── .tears.yml
+    │   ├── .tears.toml
     │   ├── src/auth/tokens.py
     │   ├── src/api/routes.py
     │   └── expected.txt
@@ -427,10 +436,10 @@ debug from a fixture dir alone.
 **Milestone 1: `fixtures/01_clean_repo/` passes.** This forces the whole pipeline to exist.
 
 1. Set up `tests/scan/test_scan.py` — parametrized loop + snapshot comparison.
-2. Build `fixtures/01_clean_repo/` — tiny but realistic clean repo with `.tears.yml`,
+2. Build `fixtures/01_clean_repo/` — tiny but realistic clean repo with `.tears.toml`,
    source files, `expected.txt`.
 3. Implement the minimum to make it pass:
-   - `tears.config.load_config` (just enough to load the YAML)
+   - `tears.config.load_config` (just enough to load the TOML)
    - `tears.header.parse_tear_level` — write `tests/unit/test_header.py` here for edge cases
    - `tears.graph.ImportGraph` Protocol + `tears.graph.grimp_builder` — just enough for this fixture. Protocol stays so A or B2 can swap in later.
    - `tears.rules.can_import` + `check_directory_requirement` — write `tests/unit/test_rules.py` here
@@ -485,8 +494,11 @@ implementations behind it. Everything else stays flat.
 | Import handling builder for v1? | **B1: grimp + own checker + own CLI.** Behind the `ImportGraph` Protocol — A or B2 can swap in as one new module. See §2.2. |
 | Stdlib filtering? | No — extractor returns verbatim, resolver returns `None` for non-`source_roots` paths |
 | `from X import Y` resolution? | Try `X.Y` as file first, fall back to `X` (verify under Option B) |
-| Snapshot format? | Plain text, `expected.txt` + `--- exit: N ---` line |
-| Malformed config handling? | Hard fail with clear error |
+| Snapshot format? | Plain text, `expected.txt` + optional `--- stderr ---` block + `--- exit: N ---` line |
+| Config file format? | TOML (`.tears.toml`), parsed via stdlib `tomllib`. No third-party YAML dep. |
+| Malformed config handling? | `tears` hard-fails with exit code 2; hook falls back to defaults so Claude Code never breaks. |
+| Repo root resolution (hook)? | `.git/` preferred over `.tears.toml` (nested configs are legitimate — e.g. test fixtures). |
+| Per-directory exemption? | `.notears` marker file. v1: not parsed — purely a human marker. Exclude patterns in root `.tears.toml` do the actual scan/hook exclusion. Future: tears may read `.notears` content (uses `# @tear: N` format) as directory-level attestation. |
 | Hook on duplicate headers? | Replace all (idempotent) |
 | Header insertion preserves shebang? | Yes |
 | Header insertion preserves encoding declaration? | Yes (PEP 263 — must stay on line 1 or 2) |

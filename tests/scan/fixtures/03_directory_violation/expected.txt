@@ -1,0 +1,6 @@
+OK    src/auth/__init__.py (tear 0)
+FAIL  src/auth/tokens.py (tear 2)
+  - directory requires tear 0, file is tear 2
+
+2 files checked, 1 failure, 0 warnings
+--- exit: 1 ---

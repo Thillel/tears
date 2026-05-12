@@ -1,5 +1,5 @@
 # @tear: 3
-"""Tests for `.tears.yml` parsing and validation."""
+"""Tests for `.tears.toml` parsing and validation."""
 
 from __future__ import annotations
 
@@ -24,19 +24,21 @@ def test_load_missing_config_returns_defaults(tmp_path: Path) -> None:
     assert load_config(tmp_path) == TearsConfig()
 
 
-def test_load_yaml(tmp_path: Path) -> None:
-    (tmp_path / ".tears.yml").write_text(
-        "max_tear: 5\n"
-        "directory_requirements:\n"
-        "  src/auth: 0\n"
-        "  src/api: 2\n"
-        "exclude:\n"
-        "  - '**/*.generated.py'\n"
-        "imports:\n"
-        "  source_roots: ['src']\n"
-        "import_rules:\n"
-        "  1: [0, 1, 2]\n"
-        "missing_header: error\n"
+def test_load_toml(tmp_path: Path) -> None:
+    (tmp_path / ".tears.toml").write_text(
+        'max_tear = 5\n'
+        'exclude = ["**/*.generated.py"]\n'
+        'missing_header = "error"\n'
+        "\n"
+        "[directory_requirements]\n"
+        '"src/auth" = 0\n'
+        '"src/api" = 2\n'
+        "\n"
+        "[imports]\n"
+        'source_roots = ["src"]\n'
+        "\n"
+        "[import_rules]\n"
+        '"1" = [0, 1, 2]\n'
     )
     cfg = load_config(tmp_path)
     assert cfg.max_tear == 5
@@ -48,7 +50,10 @@ def test_load_yaml(tmp_path: Path) -> None:
 
 
 def test_trailing_slashes_in_directory_keys_normalized(tmp_path: Path) -> None:
-    (tmp_path / ".tears.yml").write_text("directory_requirements:\n  src/auth/: 0\n")
+    (tmp_path / ".tears.toml").write_text(
+        "[directory_requirements]\n"
+        '"src/auth/" = 0\n'
+    )
     cfg = load_config(tmp_path)
     assert cfg.directory_requirements == {"src/auth": 0}
 
@@ -94,18 +99,22 @@ def test_resolved_import_rules_partial_override() -> None:
     assert resolved[3] == frozenset({0, 1, 2, 3})
 
 
-def test_malformed_yaml_raises(tmp_path: Path) -> None:
-    (tmp_path / ".tears.yml").write_text("max_tear: : :\n  nope\n")
-    with pytest.raises(ConfigError, match="malformed YAML"):
-        load_config(tmp_path)
-
-
-def test_top_level_not_mapping(tmp_path: Path) -> None:
-    (tmp_path / ".tears.yml").write_text("- just\n- a\n- list\n")
-    with pytest.raises(ConfigError, match="top level must be a mapping"):
+def test_malformed_toml_raises(tmp_path: Path) -> None:
+    (tmp_path / ".tears.toml").write_text("max_tear = = =\nnope\n")
+    with pytest.raises(ConfigError, match="malformed TOML"):
         load_config(tmp_path)
 
 
 def test_bad_missing_header_value() -> None:
     with pytest.raises(ConfigError, match="missing_header must be"):
         TearsConfig(missing_header="explode")
+
+
+def test_import_rules_non_integer_key_rejected(tmp_path: Path) -> None:
+    """TOML keys are strings; we require integer-valued strings for `import_rules`."""
+    (tmp_path / ".tears.toml").write_text(
+        "[import_rules]\n"
+        '"not_an_int" = [0]\n'
+    )
+    with pytest.raises(ConfigError, match="import_rules keys must be integer-valued"):
+        load_config(tmp_path)

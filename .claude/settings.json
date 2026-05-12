@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:import-linter.readthedocs.io)",
+      "WebFetch(domain:code.claude.com)",
+      "Bash(make check)",
+      "Bash(make check 2>&1 | tail -25)"
+
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv run python -m tears.hook"
+          }
+        ]
+      }
+    ]
+  }
+}
