@@ -83,7 +83,7 @@ the demotion.
 ## Try it locally
 
 ```bash
-git clone https://github.com/<user>/tears
+git clone https://github.com/Thillel/tears
 cd tears
 uv sync
 uv run tears path/to/your/repo
