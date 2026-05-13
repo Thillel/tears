@@ -1,7 +1,7 @@
 # @tear: 1
 [project]
 name = "tears-cli"
-version = "0.1.0"
+version = "0.1.0a1"
 description = "Tiered Enforcement, Authorship Review System — vibe-code responsibly."
 authors = [
     { name = "Hillel Twersky", email = "35217356+Thillel@users.noreply.github.com" }
