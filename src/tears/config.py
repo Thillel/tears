@@ -29,7 +29,7 @@ class TearsConfig:
     directory_requirements: dict[str, int] = field(default_factory=lambda: {})
     exclude: list[str] = field(default_factory=lambda: [])
     source_roots: list[str] = field(default_factory=lambda: ["."])
-    import_rules: dict[int, list[int]] | None = None
+    import_rules: dict[int, int] | None = None
     missing_header: str = "warn"
 
     def __post_init__(self) -> None:
@@ -47,27 +47,24 @@ class TearsConfig:
                     f"tear level {tier} exceeds max_tear {self.max_tear}"
                 )
         if self.import_rules is not None:
-            for importer, allowed in self.import_rules.items():
+            for importer, max_allowed in self.import_rules.items():
                 if not 0 <= importer <= self.max_tear:
                     raise ConfigError(
                         f"import_rules key {importer}: "
                         f"tear level {importer} exceeds max_tear {self.max_tear}"
                     )
-                for target in allowed:
-                    if not 0 <= target <= self.max_tear:
-                        raise ConfigError(
-                            f"import_rules[{importer}] contains {target}: "
-                            f"tear level {target} exceeds max_tear {self.max_tear}"
-                        )
-                if importer not in allowed:
-                    raise ConfigError(f"tier {importer} must be able to import from itself")
+                if not 0 <= max_allowed <= self.max_tear:
+                    raise ConfigError(
+                        f"import_rules[{importer}] = {max_allowed}: "
+                        f"max_allowed {max_allowed} exceeds max_tear {self.max_tear}"
+                    )
 
     def resolved_import_rules(self) -> dict[int, frozenset[int]]:
         """Full matrix with defaults filled in for any unspecified tier."""
         resolved: dict[int, frozenset[int]] = {}
         for tier in range(self.max_tear + 1):
             if self.import_rules is not None and tier in self.import_rules:
-                resolved[tier] = frozenset(self.import_rules[tier])
+                resolved[tier] = frozenset(range(self.import_rules[tier] + 1))
             else:
                 resolved[tier] = frozenset(range(tier + 1))
         return resolved
@@ -137,7 +134,7 @@ def _from_mapping(raw: dict[str, Any], *, source: str) -> TearsConfig:
 
     if "import_rules" in raw:
         ir_raw = _require_mapping(raw["import_rules"], "import_rules", source)
-        rules: dict[int, list[int]] = {}
+        rules: dict[int, int] = {}
         for key, value in ir_raw.items():
             # TOML keys are always strings; convert to int.
             try:
@@ -146,19 +143,12 @@ def _from_mapping(raw: dict[str, Any], *, source: str) -> TearsConfig:
                 raise ConfigError(
                     f"{source}: import_rules keys must be integer-valued strings, got {key!r}"
                 ) from exc
-            if not isinstance(value, list):
+            if not isinstance(value, int) or isinstance(value, bool):
                 raise ConfigError(
-                    f"{source}: import_rules[{key_int}] must be a list, "
+                    f"{source}: import_rules[{key_int}] must be an int, "
                     f"got {type(value).__name__}"
                 )
-            allowed: list[int] = []
-            for entry in cast(list[Any], value):
-                if not isinstance(entry, int) or isinstance(entry, bool):
-                    raise ConfigError(
-                        f"{source}: import_rules[{key_int}] entries must be ints, got {entry!r}"
-                    )
-                allowed.append(entry)
-            rules[key_int] = allowed
+            rules[key_int] = value
         kwargs["import_rules"] = rules
 
     if "missing_header" in raw:

@@ -50,36 +50,33 @@ def test_two_tier_system() -> None:
 
 
 # Custom rules — verified through resolved form.
+# import_rules maps each tier to the maximum tier it may import from.
+# The resolved frozenset is always a contiguous range [0..max].
 
-RELAXED = TearsConfig(import_rules={1: [0, 1, 2]}).resolved_import_rules()
-ISLANDS = TearsConfig(
-    import_rules={0: [0, 1], 1: [0, 1], 2: [2, 3], 3: [2, 3]}
-).resolved_import_rules()
-STRICT = TearsConfig(import_rules={0: [0], 1: [1], 2: [2], 3: [3]}).resolved_import_rules()
+RELAXED = TearsConfig(import_rules={1: 2}).resolved_import_rules()
+RELAXED_TIER0 = TearsConfig(import_rules={0: 1}).resolved_import_rules()
+RESTRICTED = TearsConfig(import_rules={2: 1}).resolved_import_rules()
 
 
 def test_relaxed_rules() -> None:
-    assert can_import(1, 2, RELAXED) is True
-    assert can_import(0, 2, RELAXED) is False
+    assert can_import(1, 2, RELAXED) is True   # max raised to 2
+    assert can_import(1, 3, RELAXED) is False  # still blocked above max
+    assert can_import(0, 2, RELAXED) is False  # tier 0 unaffected (default max=0)
     assert can_import(0, 1, RELAXED) is False
 
 
-def test_island_rules() -> None:
-    assert can_import(0, 1, ISLANDS) is True
-    assert can_import(1, 0, ISLANDS) is True
-    assert can_import(2, 3, ISLANDS) is True
-    assert can_import(3, 2, ISLANDS) is True
-    assert can_import(0, 2, ISLANDS) is False
-    assert can_import(2, 0, ISLANDS) is False
-    assert can_import(1, 3, ISLANDS) is False
-    assert can_import(3, 1, ISLANDS) is False
+def test_relaxed_tier0_rules() -> None:
+    assert can_import(0, 1, RELAXED_TIER0) is True   # max raised to 1
+    assert can_import(0, 2, RELAXED_TIER0) is False  # still blocked above max
+    assert can_import(1, 2, RELAXED_TIER0) is False  # tier 1 unaffected (default max=1)
 
 
-def test_strict_rules() -> None:
-    assert can_import(0, 0, STRICT) is True
-    assert can_import(0, 1, STRICT) is False
-    assert can_import(1, 0, STRICT) is False
-    assert can_import(3, 0, STRICT) is False
+def test_restricted_rules() -> None:
+    assert can_import(2, 0, RESTRICTED) is True   # tier 2 may import tier 0
+    assert can_import(2, 1, RESTRICTED) is True   # tier 2 may import tier 1
+    assert can_import(2, 2, RESTRICTED) is False  # tier 2 blocked from its own tier
+    assert can_import(2, 3, RESTRICTED) is False  # tier 2 blocked above max
+    assert can_import(3, 3, RESTRICTED) is True   # tier 3 unaffected (default max=3)
 
 
 # --- Directory requirements ---

@@ -110,17 +110,16 @@ def test_missing_header_is_treated_as_max_tear_for_import_check() -> None:
     assert all("cannot import" not in i.message for i in a_report.issues)
 
 
-def test_custom_import_rules_island_isolates_tiers() -> None:
-    config = TearsConfig(
-        import_rules={0: [0, 1], 1: [0, 1], 2: [2, 3], 3: [2, 3]},
-    )
+def test_custom_import_rules_relaxed_tier() -> None:
+    config = TearsConfig(import_rules={1: 2})
     graph = FakeGraph(
-        tiers={p("a.py"): 1, p("b.py"): 2},
-        edges={p("a.py"): {p("b.py")}},
+        tiers={p("a.py"): 1, p("b.py"): 2, p("c.py"): 3},
+        edges={p("a.py"): {p("b.py"), p("c.py")}},
     )
     report = check(graph, config, repo_root=REPO)
-    assert report.exit_code == 1
-    assert any("cannot import from tear 2" in i.message for i in report.files[0].issues)
+    a_report = next(f for f in report.files if f.path == p("a.py"))
+    assert not any("cannot import from tear 2" in i.message for i in a_report.issues)
+    assert any("cannot import from tear 3" in i.message for i in a_report.issues)
 
 
 def test_multiple_violations_in_one_file() -> None:

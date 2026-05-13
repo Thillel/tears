@@ -38,14 +38,14 @@ def test_load_toml(tmp_path: Path) -> None:
         'source_roots = ["src"]\n'
         "\n"
         "[import_rules]\n"
-        '"1" = [0, 1, 2]\n'
+        '"1" = 2\n'
     )
     cfg = load_config(tmp_path)
     assert cfg.max_tear == 5
     assert cfg.directory_requirements == {"src/auth": 0, "src/api": 2}
     assert cfg.exclude == ["**/*.generated.py"]
     assert cfg.source_roots == ["src"]
-    assert cfg.import_rules == {1: [0, 1, 2]}
+    assert cfg.import_rules == {1: 2}
     assert cfg.missing_header == "error"
 
 
@@ -70,15 +70,12 @@ def test_directory_requirement_exceeds_max_tear() -> None:
 
 def test_import_rules_exceed_max_tear() -> None:
     with pytest.raises(ConfigError, match="exceeds max_tear 3"):
-        TearsConfig(
-            max_tear=3,
-            import_rules={0: [0], 1: [0, 1], 2: [0, 1, 2], 3: [0, 1, 2, 3, 4]},
-        )
+        TearsConfig(max_tear=3, import_rules={3: 4})
 
 
-def test_import_rules_must_include_self() -> None:
-    with pytest.raises(ConfigError, match="tier 0 must be able to import from itself"):
-        TearsConfig(import_rules={0: [1], 1: [0, 1], 2: [0, 1, 2], 3: [0, 1, 2, 3]})
+def test_import_rules_max_below_tier_is_valid() -> None:
+    cfg = TearsConfig(import_rules={2: 1})
+    assert cfg.resolved_import_rules()[2] == frozenset({0, 1})
 
 
 def test_resolved_import_rules_default() -> None:
@@ -91,7 +88,7 @@ def test_resolved_import_rules_default() -> None:
 
 
 def test_resolved_import_rules_partial_override() -> None:
-    cfg = TearsConfig(import_rules={1: [0, 1, 2]})
+    cfg = TearsConfig(import_rules={1: 2})
     resolved = cfg.resolved_import_rules()
     assert resolved[0] == frozenset({0})
     assert resolved[1] == frozenset({0, 1, 2})
@@ -114,7 +111,7 @@ def test_import_rules_non_integer_key_rejected(tmp_path: Path) -> None:
     """TOML keys are strings; we require integer-valued strings for `import_rules`."""
     (tmp_path / ".tears.toml").write_text(
         "[import_rules]\n"
-        '"not_an_int" = [0]\n'
+        '"not_an_int" = 0\n'
     )
     with pytest.raises(ConfigError, match="import_rules keys must be integer-valued"):
         load_config(tmp_path)
