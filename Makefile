@@ -1,13 +1,10 @@
 # @tear: 1
-.PHONY: lint test fmt check update-snapshots
+.PHONY: lint test check update-snapshots
 
 lint:
-	uv run ruff check src tests
-	uv run pyright src tests
-
-fmt:
 	uv run ruff format src tests
 	uv run ruff check --fix src tests
+	uv run pyright src tests
 
 test:
 	uv run pytest

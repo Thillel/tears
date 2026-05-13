@@ -1,0 +1,24 @@
+# @tear: 3
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.12
+    hooks:
+      - id: ruff-format
+      - id: ruff
+        args: [--fix]
+
+  - repo: local
+    hooks:
+      - id: pyright
+        name: pyright
+        entry: uv run pyright src tests
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      - id: tears
+        name: tears
+        entry: uv run tears
+        language: system
+        pass_filenames: false
+        always_run: true
