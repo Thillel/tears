@@ -4,7 +4,9 @@
 from __future__ import annotations
 
 import argparse
+import os
 import sys
+from importlib.metadata import version as _pkg_version
 from pathlib import Path
 
 from tears.config import ConfigError
@@ -22,11 +24,17 @@ def main(argv: list[str] | None = None) -> int:
         default=".",
         help="Path to scan (defaults to the current directory).",
     )
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=f"%(prog)s {_pkg_version('tears-cli')}",
+    )
     args = parser.parse_args(argv)
 
+    color = sys.stdout.isatty() and not os.environ.get("NO_COLOR")
     repo_root = Path(args.path).resolve()
     try:
-        report, output = run_scan(repo_root)
+        report, output = run_scan(repo_root, color=color)
     except ConfigError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2

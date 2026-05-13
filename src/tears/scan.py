@@ -15,26 +15,35 @@ from tears.checker import CheckReport, FileReport, check
 from tears.config import load_config
 from tears.graph.grimp_builder import build_grimp_graph
 
+_ANSI = {
+    "ok": "\033[32m",
+    "warn": "\033[33m",
+    "fail": "\033[31m",
+    "reset": "\033[0m",
+}
 
-def run_scan(repo_root: Path) -> tuple[CheckReport, str]:
+
+def run_scan(repo_root: Path, *, color: bool = False) -> tuple[CheckReport, str]:
     """Run a full scan of `repo_root`. Returns the report and formatted output."""
     config = load_config(repo_root)
     graph = build_grimp_graph(repo_root, config)
     report = check(graph, config, repo_root=repo_root)
-    return report, format_report(report, repo_root=repo_root)
+    return report, format_report(report, repo_root=repo_root, color=color)
 
 
-def format_report(report: CheckReport, *, repo_root: Path) -> str:
+def format_report(report: CheckReport, *, repo_root: Path, color: bool = False) -> str:
     """Format a `CheckReport` for human consumption."""
     out = StringIO()
     for fr in report.files:
-        out.write(_format_file(fr, repo_root=repo_root))
+        out.write(_format_file(fr, repo_root=repo_root, color=color))
     out.write(_format_summary(report))
     return out.getvalue()
 
 
-def _format_file(fr: FileReport, *, repo_root: Path) -> str:
+def _format_file(fr: FileReport, *, repo_root: Path, color: bool = False) -> str:
     label = {"ok": "OK   ", "warn": "WARN ", "fail": "FAIL "}[fr.status]
+    if color:
+        label = f"{_ANSI[fr.status]}{label}{_ANSI['reset']}"
     rel = _relative(fr.path, repo_root)
     tier_suffix = f" (tear {fr.tier})" if fr.tier is not None else ""
     line = f"{label} {rel}{tier_suffix}\n"
