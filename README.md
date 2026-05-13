@@ -92,10 +92,13 @@ uv run tears path/to/your/repo
 Add a `.tears.toml` at the repo root:
 
 ```toml
-directory_requirements:
-  src/auth: 0
-  src/api: 1
-imports = { source_roots = ["src"] }
+[directory_requirements]
+"src/auth" = 0
+"src/api" = 1
+
+[imports]
+source_roots = ["src"]
+
 missing_header = "warn"  # or "error"
 ```
 

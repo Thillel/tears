@@ -289,11 +289,12 @@ to subcommands only if/when a mode proves popular enough to justify migration.
 **Usage:**
 - `tears` — scan the repo from cwd
 - `tears src/` — scan a specific path
-- `tears file.py` — scan a single file (TBD whether useful)
+- `tears file.py` — scan a single file *(not yet implemented; deferred to v1.5 per roadmap §17)*
 
 **Pipeline:**
-1. Discover all `.py` files in the repo (respect `.gitignore` if `git` is available;
-   otherwise walk and apply `exclude` + extension filter).
+1. Discover all `.py` files in the repo via grimp over configured `source_roots`. Note:
+   `.gitignore` filtering is **not yet implemented** (deferred to Phase 1 per roadmap §10);
+   use `exclude` patterns in `.tears.toml` as a workaround.
 2. Parse the header from each → tier or missing.
 3. For each file: extract imports → resolve each → look up target tier → check rule.
 4. For each file: check directory requirement.

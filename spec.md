@@ -65,7 +65,7 @@ The following are excluded from tear enforcement entirely (they don't need heade
 
 - Binary files (images, fonts, compiled assets)
 - Lock files (`package-lock.json`, `yarn.lock`, `poetry.lock`, etc.)
-- Generated files explicitly listed in `.tears.yml` under `exclude`
+- Generated files explicitly listed in `.tears.toml` under `exclude`
 - Files matching patterns in `.gitattributes` marked as binary
 - Markdown files, unless opted in via config
 - Config/dotfiles (`.eslintrc`, `tsconfig.json`, etc.), unless opted in via config
@@ -79,9 +79,9 @@ The following are excluded from tear enforcement entirely (they don't need heade
 | Importing file | Can import from |
 |----------------|-----------------|
 | Tear 0 | Tear 0 only |
-| Tear 1 | Tear 0, 1 |
-| Tear 2 | Tear 0, 1, 2 |
-| Tear 3 | Tear 0, 1, 2, 3 |
+| Tear 1 | Tear <= 1 |
+| Tear 2 | Tear <= 2 |
+| Tear 3 | Tear <= 3 |
 
 This default means tear 0 code is the most protected — nothing untrusted can sneak into its dependency chain. Tear 3 code can use anything because it's already untrusted; restricting its imports doesn't add safety.
 
@@ -89,43 +89,37 @@ This default means tear 0 code is the most protected — nothing untrusted can s
 
 The default rule is a single integer comparison: `target_tear <= importer_tear`. When no `import_rules` are configured, this is the fast path — no lookups, no sets, just one `<=`.
 
-For teams that need non-linear trust relationships, `import_rules` in `.tears.yml` overrides the matrix. Each key is a tear level; its value is the list of tear levels it's allowed to import from. Partial overrides are supported — unspecified tiers fall back to the default rule.
+For teams that need custom import ceilings, `import_rules` in `.tears.toml` overrides the defaults. Each key is a tear level; its value is the maximum tier it may import from — all tiers from 0 up to that value are permitted. Partial overrides are supported — unspecified tiers fall back to the default rule.
 
-```yaml
-# Default (generated if import_rules is omitted):
-# import_rules:
-#   0: [0]
-#   1: [0, 1]
-#   2: [0, 1, 2]
-#   3: [0, 1, 2, 3]
+```toml
+# Default (import_rules omitted — uses "<=" rule):
+# [import_rules]
+# "0" = 0
+# "1" = 1
+# "2" = 2
+# "3" = 3
 
 # Example: relax tier 1 to allow importing from tier 2
-import_rules:
-  1: [0, 1, 2]    # only override the tier that needs it
-
-# Example: "island" model — tiers 0-1 interop freely, 2-3 interop freely, no crossing
-import_rules:
-  0: [0, 1]
-  1: [0, 1]
-  2: [2, 3]
-  3: [2, 3]
-
-# Example: 6-tier system where 0-2 are a trusted zone
-import_rules:
-  0: [0, 1, 2]
-  1: [0, 1, 2]
-  2: [0, 1, 2]
-  3: [0, 1, 2, 3]
-  4: [0, 1, 2, 3, 4]
-  5: [0, 1, 2, 3, 4, 5]
+[import_rules]
+"1" = 2    # only override the tier that needs it
 ```
 
-**Implementation:** when `import_rules` is present, the config loader resolves the full matrix at load time (filling in defaults for unspecified tiers) and converts each allow list to a frozen set. The per-import check becomes a single set membership test. When `import_rules` is absent (the common case), the check is just `target_tear <= importer_tear`.
+```toml
+# Example: 6-tier system where 0-2 are a trusted zone
+[import_rules]
+"0" = 2
+"1" = 2
+"2" = 2
+"3" = 3
+"4" = 4
+"5" = 5
+```
+
+**Implementation:** when `import_rules` is present, the config loader resolves the full matrix at load time (filling in defaults for unspecified tiers) and converts each max value to a `frozenset(range(max + 1))`. The per-import check becomes a single set membership test. When `import_rules` is absent (the common case), the check is just `target_tear <= importer_tear`.
 
 **Validation rules:**
 - Every tier from 0 to `max_tear` must have an entry (missing entries fall back to the default rule for that tier).
-- A tier must always be able to import from itself (the linter rejects configs where a tier is not in its own allow list).
-- Values must be valid tear levels (0 to `max_tear`).
+- Values must be valid tear levels (0 to `max_tear`). A max below the tier itself is allowed — it means that tier may only import from more-trusted code.
 
 ### What counts as an import
 
@@ -138,7 +132,7 @@ from foo.bar import baz
 from . import sibling
 from ..parent import thing
 ```
-
+and in the future:
 **JavaScript/TypeScript:**
 ```javascript
 import { x } from './auth/tokens'
@@ -167,18 +161,18 @@ If an import cannot be resolved to a file in the repo, it is skipped. The linter
 
 ## 4. Directory Requirements
 
-The config file `.tears.yml` at the repo root can declare minimum tear levels for directories:
+The config file `.tears.toml` at the repo root can declare minimum tear levels for directories:
 
-```yaml
-directory_requirements:
-  src/auth: 0
-  src/db: 0
-  src/core/models: 0
-  src/api: 1
-  src/services: 1
-  scripts: 3        # anything goes
-  tests: 3          # anything goes
-  tools/internal: 2
+```toml
+[directory_requirements]
+"src/auth" = 0
+"src/db" = 0
+"src/core/models" = 0
+"src/api" = 1
+"src/services" = 1
+"scripts" = 3        # anything goes
+"tests" = 3          # anything goes
+"tools/internal" = 2
 ```
 
 A file at `src/auth/tokens.py` with `# @tear: 2` would fail the check — the directory requires tear 0.
@@ -191,10 +185,10 @@ If no directory requirement is configured for a path, any tear level is acceptab
 
 The most specific (longest) matching prefix wins. Given:
 
-```yaml
-directory_requirements:
-  src: 1
-  src/auth: 0
+```toml
+[directory_requirements]
+"src" = 1
+"src/auth" = 0
 ```
 
 A file at `src/auth/tokens.py` must be tear 0.  
@@ -219,7 +213,7 @@ This is a shell script registered as a Claude Code hook. It receives the path of
 - Detects the file's comment syntax from its extension.
 - Uses `sed` or equivalent to find and replace the tear value, or prepend the header.
 - Runs synchronously before the edit is presented to the user.
-- Does NOT modify binary files, lock files, or files matching exclude patterns from `.tears.yml`.
+- Does NOT modify binary files, lock files, or files matching exclude patterns from `.tears.toml`.
 
 **The key design point**: this is not Claude cooperating by instruction. It's a mechanical hook that runs outside Claude's context. Claude's system prompt / CLAUDE.md should ALSO instruct it to set tear 3 on new files, but the hook is the enforcement backstop — it doesn't rely on prompt compliance.
 
@@ -259,109 +253,76 @@ Tear levels:
 
 ---
 
-## 6. Configuration: `.tears.yml`
+## 6. Configuration: `.tears.toml`
 
-Full configuration schema:
+Full configuration schema. Fields marked **(future)** are planned but not yet implemented in v1.
 
-```yaml
-# .tears.yml
+```toml
+# .tears.toml
 
-# Minimum tear level required per directory
-directory_requirements:
-  src/auth: 0
-  src/db: 0
-  src/core: 1
-  src/api: 1
-  scripts: 3
+# Maximum tear level (default 3). Extend to 5 for a 6-tier system.
+max_tear = 3
 
 # Files/patterns excluded from tear enforcement entirely
-exclude:
-  - "**/*.generated.ts"
-  - "**/*.pb.go"
-  - "migrations/**"
-  - "*.config.js"
-  - "*.config.ts"
-  - "package.json"
-  - "*.lock"
-  - "*.md"
+exclude = [
+  "**/*.generated.py",
+  "migrations/**",
+]
 
-# File extensions to enforce (if omitted, all non-excluded non-binary files)
-include_extensions:
-  - .py
-  - .js
-  - .ts
-  - .tsx
-  - .jsx
-  - .go
-  - .rs
-  - .java
-  - .rb
-  - .sql
-
-# Comment syntax overrides (the linter has built-in defaults for common languages)
-comment_syntax:
-  ".py": "#"
-  ".js": "//"
-  ".ts": "//"
-  ".go": "//"
-  ".rs": "//"
-  ".java": "//"
-  ".rb": "#"
-  ".sql": "--"
-  ".html": "<!-- | -->"
-  ".css": "/* | */"
+# Minimum tear level required per directory
+[directory_requirements]
+"src/auth" = 0
+"src/db" = 0
+"src/core" = 1
+"src/api" = 1
+"scripts" = 3
 
 # Import resolution settings
-imports:
-  # Root directories for import resolution (relative to repo root)
-  source_roots:
-    - src
-    - lib
-  
-  # Additional import path aliases (e.g., for TypeScript path mapping)
-  aliases:
-    "@/": "src/"
-    "@auth/": "src/auth/"
-    "@core/": "src/core/"
+[imports]
+# Root directories for import resolution (relative to repo root)
+source_roots = ["src", "lib"]
 
-# Import rules override (optional — if omitted, uses default "equal or better" rule)
-# Each key is a tear level; value is the list of tear levels it may import from.
-# import_rules:
-#   0: [0]
-#   1: [0, 1]
-#   2: [0, 1, 2]
-#   3: [0, 1, 2, 3]
-
-# Promotion rules
-strict_promotion: false  # if true, tear improvements must be in commits with no other changes to that file
-
-# Test file handling
-test_policy: exclude    # "exclude" | "inherit" | "enforce"
+# Import rules override (optional — if omitted, uses default "<= tier" rule)
+# Keys are tier numbers (as strings); values are the max tier that tier may import from.
+# [import_rules]
+# "1" = 2    # tier 1 may also import from tier 2
 
 # Missing header behavior
-missing_header: warn    # "warn" | "error"
+missing_header = "warn"    # "warn" | "error"
 ```
+
+The following config keys are **planned for future versions** and not yet implemented in v1:
+
+- `include_extensions` — limit scanning to specific file extensions (v2, multi-language)
+- `imports.aliases` — TypeScript/Babel path aliases like `"@/" = "src/"` (v2)
+- `strict_promotion` — require tier promotions to be in separate commits (v1.5)
+- `test_policy` — special handling for test files: `"exclude"` | `"inherit"` | `"enforce"` (v1.5)
 
 ---
 
 ## 7. CLI Interface
 
-The tool is a single CLI binary (Python, to start) with the following commands:
+### `tears [PATH]` *(v1 — implemented)*
 
-### `tears check [--files FILE...]`
+The only command in v1. Runs a full scan of `PATH` (default: current directory).
 
-The primary CI command. Checks all provided files (or all changed files if piped from `git diff`) for:
+```
+tears              # scan the repo from cwd
+tears src/         # scan a specific subdirectory
+```
 
-1. **Header presence** — every included file has a `@tear` header in its first 5 lines. Missing = treated as tear 3, reported as warning or error per config.
-2. **Directory compliance** — file's tear level meets or exceeds its directory's minimum requirement.
-3. **Import compliance** — every resolvable in-repo import targets a file with equal or better tear level.
+Checks every `.py` file for:
 
-Exit code 0 = all checks pass. Exit code 1 = violations found.
+1. **Header presence** — every included file has a `@tear` header in its first 5 lines. Missing = treated as `max_tear`, reported as warning or error per config.
+2. **Directory compliance** — file's tear level meets the `directory_requirements` for its path.
+3. **Import compliance** — every resolvable in-repo import targets a file at equal or better tier.
+
+Exit code 0 = all checks pass. Exit code 1 = violations found. Exit code 2 = config error.
 
 Output format:
 
 ```
-FAIL  src/auth/tokens.py
+FAIL  src/auth/tokens.py (tear 2)
   - directory requires tear 0, file is tear 2
 
 FAIL  src/utils/parser.py (tear 3)
@@ -375,33 +336,32 @@ OK    src/api/routes.py (tear 1)
 3 files checked, 2 failures, 1 warning
 ```
 
-### `tears scan`
+---
 
-Full repo audit. Runs all checks against every included file in the repo, not just changed files. Useful for initial adoption and periodic audits.
+The following commands are **planned for future versions** and not yet implemented.
 
-### `tears init`
+### `tears init` *(planned — v1.0)*
 
 Bootstraps the system in an existing repo:
 
-1. Creates a default `.tears.yml`.
+1. Creates a default `.tears.toml`.
 2. Scans all files and adds `# @tear: 1` headers to existing files (on the theory that existing code was previously reviewed by humans under the old process).
-3. Creates the Claude Code hook file at `.claude/hooks/post-edit.sh`.
+3. Optionally registers the Claude Code hook in `.claude/settings.json`.
 4. Prints a summary of what it did and next steps.
 
-The initial tear level for existing files is configurable (`--default-tear 1`). You might want everything to start at 2 if you're not confident in prior review quality.
+The initial tear level is configurable (`--default-tear 1`). You might want everything to start at 2 if you're not confident in prior review quality.
 
-### `tears promote FILE TEAR`
+### `tears promote FILE TEAR` *(planned — v1.5)*
 
 Helper command for explicit promotion. Modifies the working tree to change a file's `@tear` header. This creates a clean audit trail when committed separately from code changes.
 
-Usage:
 ```bash
 tears promote src/utils/parser.py 1
 # Changes the header from whatever it was to tear 1
 # The developer commits this change, signaling they've reviewed the file
 ```
 
-### `tears report`
+### `tears report` *(planned — v1.5)*
 
 Generates a summary of the repo's tear distribution:
 
@@ -415,9 +375,12 @@ Missing: 12 files          — config files (excluded)
 
 ---
 
-## 8. GitHub Action
+## 8. GitHub Action *(planned — v1.0)*
 
-A GitHub Action that runs `tears check` on every PR, checking only the files changed in the PR.
+> **Not yet implemented.** `tears` is not on PyPI and `tears --changed` (diff mode) is not
+> yet implemented. This section describes the planned integration.
+
+A GitHub Action that runs `tears` on every PR, checking only the files changed in the PR.
 
 ### `.github/workflows/tears.yml`
 
@@ -440,15 +403,10 @@ jobs:
           python-version: '3.11'
 
       - name: Install tears
-        run: pip install tears
+        run: pip install tears-cli  # package name TBD; not yet on PyPI
 
-      - name: Get changed files
-        id: changed
-        run: |
-          echo "files=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | tr '\n' ' ')" >> $GITHUB_OUTPUT
-
-      - name: Check tear levels
-        run: tears check --files ${{ steps.changed.outputs.files }}
+      - name: Run tears on changed files
+        run: tears --changed origin/${{ github.base_ref }}
 ```
 
 ### PR comment integration (optional enhancement)
@@ -481,7 +439,7 @@ If multiple `@tear` lines exist in the first 5 lines, the linter takes the WORST
 
 ### Tear promotion in the same PR as code changes
 
-Allowed by default. If a human edits code AND changes the tear from 3 to 1 in the same PR, they're attesting that the whole file is reviewed. The diff makes this visible to other reviewers. Some teams may want to require promotion in a separate PR — this can be configured via `strict_promotion: true`.
+Allowed by default. If a human edits code AND changes the tear from 3 to 1 in the same PR, they're attesting that the whole file is reviewed. The diff makes this visible to other reviewers. Some teams may want to require promotion in a separate PR — this can be configured via `strict_promotion: true` *(planned — v1.5; not yet implemented)*.
 
 ### Circular imports
 
@@ -489,7 +447,7 @@ Not this tool's problem. tears only checks the direction of the tear relationshi
 
 ### Test files importing from higher-tier code
 
-Tests typically need to import the code they're testing. Three options configurable via `test_policy`:
+Tests typically need to import the code they're testing. Three options configurable via `test_policy` *(planned — v1.5; not yet implemented — work around by adding `tests/` to `exclude`)*:
 
 1. **`exclude`** — list `tests/` in the exclude patterns. Tests don't have `@tear` headers and aren't subject to import checks.
 2. **`inherit`** — a test file for `src/auth/tokens.py` (tear 0) should also be tear 0, because someone who reviews auth code should also review its tests.
@@ -517,24 +475,24 @@ No AST parsing. No dependency graph construction. No package resolution. Just st
 
 ### Phase 1: Visibility (week 1)
 
-- Run `tears init --default-tear 1` to add headers to all existing files.
-- Add the GitHub Action in **warn-only mode** (exit 0 always, but post PR comments).
+- Run `tears init --default-tear 1` to add headers to all existing files *(requires `tears init`, planned for v1.0)*.
 - Add the Claude Code hook.
 - Add the CLAUDE.md instructions.
+- Run `tears` to see current state. Fix violations or adjust `directory_requirements`.
 - Let the team see the `@tear` annotations and get used to them.
 
 ### Phase 2: Import enforcement (week 2-3)
 
 - Turn on import compliance checking (exit 1 on violations).
 - Configure directory requirements for the most critical directories (`src/auth`, `src/db`).
-- Fix any existing violations surfaced by `tears scan`.
+- Run `tears` to surface existing violations and fix them.
 
 ### Phase 3: Full enforcement (week 4+)
 
 - Enable directory requirements across all configured paths.
-- Enable `strict_promotion` if desired.
+- Enable `strict_promotion` if desired *(planned — v1.5)*.
 - Enable `missing_header: error`.
-- Periodic `tears report` to track tear distribution over time.
+- Periodic `tears report` to track tear distribution over time *(planned — v1.5)*.
 
 ---
 
