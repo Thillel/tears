@@ -1,0 +1,8 @@
+# @tear: 3
+- id: tears
+  name: tears
+  description: Tiered Enforcement, Authorship Review System
+  entry: tears
+  language: python
+  pass_filenames: false
+  always_run: true
