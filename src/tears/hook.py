@@ -58,9 +58,7 @@ from tears.exclude import is_excluded
 # digits. Captures the full prefix and the digits separately so we can rewrite
 # the digit in place. The non-alphanumeric requirement keeps us from matching
 # `@tear: 1` inside a string literal like `x = "@tear: 1"`.
-LINE_HEADER_RE = re.compile(
-    r"^([ \t]*[^A-Za-z0-9\s]+[ \t]*@tear:[ \t]*)(\d+)"
-)
+LINE_HEADER_RE = re.compile(r"^([ \t]*[^A-Za-z0-9\s]+[ \t]*@tear:[ \t]*)(\d+)")
 SHEBANG_RE = re.compile(r"^#!")
 ENCODING_RE = re.compile(r"coding[=:]\s*[-\w.]+")
 
@@ -228,9 +226,7 @@ def process_file(
     if is_excluded(path, repo_root, exclude):
         return False
     content = path.read_text()
-    new_content = apply_hook(
-        content, max_tear=max_tear, extension=path.suffix, filename=path.name
-    )
+    new_content = apply_hook(content, max_tear=max_tear, extension=path.suffix, filename=path.name)
     if new_content == content:
         return False
     path.write_text(new_content)

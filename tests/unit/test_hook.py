@@ -217,9 +217,7 @@ def test_known_extension_match_is_case_insensitive() -> None:
         "scss",
     ],
 )
-def test_inserts_header_in_known_extensions(
-    extension: str, before: str, after: str
-) -> None:
+def test_inserts_header_in_known_extensions(extension: str, before: str, after: str) -> None:
     assert apply_hook(before, extension=extension) == after
 
 
@@ -233,9 +231,7 @@ def test_inserts_header_in_known_extensions(
     ],
     ids=["makefile", "dockerfile", "gitignore", "dotenv"],
 )
-def test_inserts_header_for_extensionless_files(
-    filename: str, before: str, after: str
-) -> None:
+def test_inserts_header_for_extensionless_files(filename: str, before: str, after: str) -> None:
     # Pass empty extension to simulate Path("Makefile").suffix
     assert apply_hook(before, extension="", filename=filename) == after
 
@@ -301,9 +297,7 @@ def test_process_file_skips_excluded(tmp_path: Path) -> None:
     target = tmp_path / "generated" / "schema.py"
     target.parent.mkdir()
     target.write_text("import os\n")
-    changed = process_file(
-        target, max_tear=3, exclude=["generated/**"], repo_root=tmp_path
-    )
+    changed = process_file(target, max_tear=3, exclude=["generated/**"], repo_root=tmp_path)
     assert changed is False
     assert target.read_text() == "import os\n"
 
@@ -316,9 +310,7 @@ def test_process_file_returns_false_when_already_demoted(tmp_path: Path) -> None
 
 
 def test_process_file_missing_path_is_a_noop(tmp_path: Path) -> None:
-    changed = process_file(
-        tmp_path / "ghost.py", max_tear=3, exclude=[], repo_root=tmp_path
-    )
+    changed = process_file(tmp_path / "ghost.py", max_tear=3, exclude=[], repo_root=tmp_path)
     assert changed is False
 
 
@@ -335,9 +327,7 @@ def test_main_with_argv_paths(tmp_path: Path) -> None:
 # --- CLI: stdin JSON path (Claude Code PostToolUse contract) ---
 
 
-def test_main_with_stdin_claude_payload(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_main_with_stdin_claude_payload(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     target = tmp_path / "x.py"
     target.write_text("import os\n")
 

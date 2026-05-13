@@ -26,7 +26,7 @@ def test_load_missing_config_returns_defaults(tmp_path: Path) -> None:
 
 def test_load_toml(tmp_path: Path) -> None:
     (tmp_path / ".tears.toml").write_text(
-        'max_tear = 5\n'
+        "max_tear = 5\n"
         'exclude = ["**/*.generated.py"]\n'
         'missing_header = "error"\n'
         "\n"
@@ -50,10 +50,7 @@ def test_load_toml(tmp_path: Path) -> None:
 
 
 def test_trailing_slashes_in_directory_keys_normalized(tmp_path: Path) -> None:
-    (tmp_path / ".tears.toml").write_text(
-        "[directory_requirements]\n"
-        '"src/auth/" = 0\n'
-    )
+    (tmp_path / ".tears.toml").write_text('[directory_requirements]\n"src/auth/" = 0\n')
     cfg = load_config(tmp_path)
     assert cfg.directory_requirements == {"src/auth": 0}
 
@@ -109,9 +106,6 @@ def test_bad_missing_header_value() -> None:
 
 def test_import_rules_non_integer_key_rejected(tmp_path: Path) -> None:
     """TOML keys are strings; we require integer-valued strings for `import_rules`."""
-    (tmp_path / ".tears.toml").write_text(
-        "[import_rules]\n"
-        '"not_an_int" = 0\n'
-    )
+    (tmp_path / ".tears.toml").write_text('[import_rules]\n"not_an_int" = 0\n')
     with pytest.raises(ConfigError, match="import_rules keys must be integer-valued"):
         load_config(tmp_path)

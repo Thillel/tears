@@ -145,8 +145,7 @@ def _from_mapping(raw: dict[str, Any], *, source: str) -> TearsConfig:
                 ) from exc
             if not isinstance(value, int) or isinstance(value, bool):
                 raise ConfigError(
-                    f"{source}: import_rules[{key_int}] must be an int, "
-                    f"got {type(value).__name__}"
+                    f"{source}: import_rules[{key_int}] must be an int, got {type(value).__name__}"
                 )
             rules[key_int] = value
         kwargs["import_rules"] = rules
