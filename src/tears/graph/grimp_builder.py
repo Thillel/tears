@@ -12,6 +12,7 @@ Builds the graph by:
 from __future__ import annotations
 
 import contextlib
+import subprocess
 import sys
 from collections.abc import Iterable
 from pathlib import Path
@@ -61,7 +62,11 @@ def build_grimp_graph(repo_root: Path, config: TearsConfig) -> GrimpImportGraph:
         if not sr.is_dir():
             continue
         for child in sorted(sr.iterdir()):
-            if child.is_dir() and (child / "__init__.py").exists():
+            if (
+                child.is_dir()
+                and (child / "__init__.py").exists()
+                and not _git_ignored(child, repo_root)
+            ):
                 packages.append((child.name, sr))
 
     if not packages:
@@ -124,3 +129,17 @@ def _build_module_index(package_roots: dict[str, Path]) -> dict[str, Path]:
             module = ".".join((pkg_name, *parts)) if parts else pkg_name
             index[module] = py_file.resolve()
     return index
+
+
+def _git_ignored(path: Path, repo_root: Path) -> bool:
+    """Return True if `path` is ignored by git, False if not or if git is unavailable."""
+    try:
+        result = subprocess.run(
+            ["git", "check-ignore", "-q", "--", str(path)],
+            capture_output=True,
+            cwd=repo_root,
+            timeout=5,
+        )
+        return result.returncode == 0
+    except (OSError, subprocess.TimeoutExpired):
+        return False
