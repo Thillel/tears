@@ -1,0 +1,46 @@
+# @tear: 3
+name: Test Action
+
+on:
+  push:
+    branches: [feat/github-action]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test-passes:
+    name: Action passes on clean repo
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Thillel/tears/.github/actions@feat/github-action
+
+  test-fails:
+    name: Action fails on violation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up repo with a directory requirement violation
+        run: |
+          mkdir -p /tmp/test-repo/src
+          printf '[directory_requirements]\n"src" = 0\n' > /tmp/test-repo/.tears.toml
+          touch /tmp/test-repo/src/__init__.py
+          printf '# @tear: 3\n' > /tmp/test-repo/src/thing.py
+          printf '[build-system]\nrequires = ["setuptools"]\nbuild-backend = "setuptools.backends.legacy:build"\n\n[project]\nname = "test-repo"\nversion = "0.1.0"\n' > /tmp/test-repo/pyproject.toml
+
+      - name: Run action and expect failure
+        id: tears-check
+        uses: Thillel/tears/.github/actions@feat/github-action
+        with:
+          path: /tmp/test-repo
+        continue-on-error: true
+
+      - name: Confirm action exited non-zero
+        run: |
+          if [ "${{ steps.tears-check.outcome }}" = "failure" ]; then
+            echo "Action correctly failed on violation"
+          else
+            echo "Action should have failed but didn't"
+            exit 1
+          fi
