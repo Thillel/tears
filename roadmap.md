@@ -18,15 +18,16 @@
 
 ### Phase 1: v1.0 — ship to PyPI
 
-| # | What | Why |
-|---|------|-----|
-| 6 | **`tears init`** — scaffolds `.tears.toml`, adds `@tear: N` headers to all existing files, optionally registers the hook | The #1 onboarding gate. Without this, adoption means editing every file by hand. |
-| 7 | **PyPI package** — `uv build && uv publish` as `tears-cli` | Can't be installed outside this repo. |
-| 8 | **Pre-commit hook** — `.pre-commit-hooks.yaml` + `tears pre-commit` entry point | Catches violations in milliseconds, not CI-minutes. Reaches teams without Claude Code. |
-| 9 | **GitHub Action** — reusable workflow that runs `tears --changed origin/main` on PRs | Required for CI integration. |
-| 10 | **Fix `.gitignore` handling** — add `git check-ignore` filtering in the graph builder, or formally document the deferral | Scanning `.venv/` or `node_modules/` is broken and slow. |
-| 11 | **ANSI colored output** — red FAIL / yellow WARN / green OK | 20-line change, big impact on perceived quality. |
-| 12 | **`--version` flag** | Baseline CLI hygiene. |
+| # | What | Status | Why |
+|---|------|--------|-----|
+| 6 | **`tears init`** — scaffolds `.tears.toml`, adds `@tear: N` headers to all existing files, optionally registers the hook | — | The #1 onboarding gate. Less urgent now that `default_tear` lets you scan without tagging every file, but still needed for teams that want explicit headers everywhere. |
+| 6a | **`default_tear` / `default_tears` / `--default-tear`** — assume a tier for headerless files, globally or per folder | ✅ done | Lets teams try tears on an existing codebase in minutes without touching a single source file. |
+| 7 | **PyPI package** — `uv build && uv publish` as `tears-cli` | ✅ workflows in place (`0.1.0a1`) | Can't be installed outside this repo. |
+| 8 | **Pre-commit hook** — `.pre-commit-hooks.yaml` + `tears pre-commit` entry point | ✅ done | Catches violations in milliseconds, not CI-minutes. Reaches teams without Claude Code. |
+| 9 | **GitHub Action** — reusable workflow that runs `tears` on PRs | 🔄 branch ready | Required for CI integration. |
+| 10 | **Fix `.gitignore` handling** — add `git check-ignore` filtering in the graph builder, or formally document the deferral | — | Scanning `.venv/` or `node_modules/` is broken and slow. **Blocking v1.0.** |
+| 11 | **ANSI colored output** — red FAIL / yellow WARN / green OK | ✅ done | 20-line change, big impact on perceived quality. |
+| 12 | **`--version` flag** | ✅ done | Baseline CLI hygiene. |
 
 ---
 
@@ -75,7 +76,7 @@
 
 Within each phase, build top-down. Each item assumes everything above it is done.
 
-Phase 1 is the minimum shippable tool: `init` + PyPI + pre-commit + GitHub Action + gitignore + colors + `--version`.
+Phase 1 is the minimum shippable tool: `init` + PyPI + pre-commit + GitHub Action + gitignore + colors + `--version`. Of these, only `init` (6) and `.gitignore` (10) remain. `.gitignore` is the hard blocker — the tool silently hangs or floods output on any real project with a virtualenv.
 
 Phase 2 rounds out usability gaps that emerge from real usage.
 
