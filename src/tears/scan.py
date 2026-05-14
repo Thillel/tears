@@ -8,6 +8,7 @@ in `tests/scan/fixtures/`.
 
 from __future__ import annotations
 
+from dataclasses import replace
 from io import StringIO
 from pathlib import Path
 
@@ -23,9 +24,16 @@ _ANSI = {
 }
 
 
-def run_scan(repo_root: Path, *, color: bool = False) -> tuple[CheckReport, str]:
+def run_scan(
+    repo_root: Path,
+    *,
+    color: bool = False,
+    default_tear: int | None = None,
+) -> tuple[CheckReport, str]:
     """Run a full scan of `repo_root`. Returns the report and formatted output."""
     config = load_config(repo_root)
+    if default_tear is not None:
+        config = replace(config, default_tear=default_tear)
     graph = build_grimp_graph(repo_root, config)
     report = check(graph, config, repo_root=repo_root)
     return report, format_report(report, repo_root=repo_root, color=color)
@@ -45,7 +53,8 @@ def _format_file(fr: FileReport, *, repo_root: Path, color: bool = False) -> str
     if color:
         label = f"{_ANSI[fr.status]}{label}{_ANSI['reset']}"
     rel = _relative(fr.path, repo_root)
-    tier_suffix = f" (tear {fr.tier})" if fr.tier is not None else ""
+    show_tier = fr.tier is not None or fr.is_defaulted
+    tier_suffix = f" (tear {fr.effective_tier})" if show_tier else ""
     line = f"{label} {rel}{tier_suffix}\n"
     issues = "".join(f"  - {i.message}\n" for i in fr.issues)
     suffix = "\n" if fr.issues else ""

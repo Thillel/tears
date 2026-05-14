@@ -29,6 +29,8 @@ class Issue:
 class FileReport:
     path: Path
     tier: int | None
+    effective_tier: int
+    is_defaulted: bool = False
     issues: tuple[Issue, ...] = field(default_factory=lambda: ())
 
     @property
@@ -70,18 +72,22 @@ def check(
     reports: list[FileReport] = []
     for file_path in sorted(graph.files(), key=str):
         tier = graph.tier_of(file_path)
-        effective_tier = tier if tier is not None else config.max_tear
+        rel_path = _relative_posix(file_path, repo_root)
         issues: list[Issue] = []
 
-        if tier is None:
-            issues.append(
-                Issue(
-                    severity=missing_severity,
-                    message=f"missing @tear header (treated as tear {config.max_tear})",
+        is_defaulted = False
+        if tier is not None:
+            effective_tier = tier
+        else:
+            effective_tier, is_defaulted = config.resolve_missing_tier(rel_path)
+            if not is_defaulted:
+                issues.append(
+                    Issue(
+                        severity=missing_severity,
+                        message=f"missing @tear header (treated as tear {effective_tier})",
+                    )
                 )
-            )
 
-        rel_path = _relative_posix(file_path, repo_root)
         if not check_directory_requirement(rel_path, effective_tier, config.directory_requirements):
             required = _required_tier(rel_path, config.directory_requirements)
             issues.append(
@@ -93,7 +99,11 @@ def check(
 
         for target in sorted(graph.imports_of(file_path), key=str):
             target_tier = graph.tier_of(target)
-            target_effective = target_tier if target_tier is not None else config.max_tear
+            if target_tier is not None:
+                target_effective = target_tier
+            else:
+                target_rel_path = _relative_posix(target, repo_root)
+                target_effective, _ = config.resolve_missing_tier(target_rel_path)
             if can_import(effective_tier, target_effective, resolved_rules):
                 continue
             target_rel = _relative_posix(target, repo_root)
@@ -107,7 +117,15 @@ def check(
                 )
             )
 
-        reports.append(FileReport(path=file_path, tier=tier, issues=tuple(issues)))
+        reports.append(
+            FileReport(
+                path=file_path,
+                tier=tier,
+                effective_tier=effective_tier,
+                is_defaulted=is_defaulted,
+                issues=tuple(issues),
+            )
+        )
 
     return CheckReport(files=tuple(reports))
 

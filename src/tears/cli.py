@@ -29,12 +29,19 @@ def main(argv: list[str] | None = None) -> int:
         action="version",
         version=f"%(prog)s {_pkg_version('tears-cli')}",
     )
+    parser.add_argument(
+        "--default-tear",
+        type=int,
+        metavar="N",
+        dest="default_tear",
+        help="Treat files without a @tear header as tier N (overrides config).",
+    )
     args = parser.parse_args(argv)
 
     color = sys.stdout.isatty() and not os.environ.get("NO_COLOR")
     repo_root = Path(args.path).resolve()
     try:
-        report, output = run_scan(repo_root, color=color)
+        report, output = run_scan(repo_root, color=color, default_tear=args.default_tear)
     except ConfigError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2

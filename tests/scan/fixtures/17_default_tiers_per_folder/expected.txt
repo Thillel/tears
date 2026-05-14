@@ -1,0 +1,5 @@
+OK    src/auth/__init__.py (tear 0)
+OK    src/auth/tokens.py (tear 1)
+OK    src/utils/__init__.py (tear 2)
+3 files checked, 0 failures, 0 warnings
+--- exit: 0 ---

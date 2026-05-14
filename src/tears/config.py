@@ -12,6 +12,10 @@ CONFIG_FILENAME = ".tears.toml"
 MISSING_HEADER_VALUES = ("warn", "error")
 
 
+def _path_segments(path: str) -> tuple[str, ...]:
+    return tuple(p for p in path.strip("/").split("/") if p)
+
+
 class ConfigError(ValueError):
     """Raised when `.tears.toml` is malformed or fails schema validation."""
 
@@ -31,6 +35,8 @@ class TearsConfig:
     source_roots: list[str] = field(default_factory=lambda: ["."])
     import_rules: dict[int, int] | None = None
     missing_header: str = "warn"
+    default_tear: int | None = None
+    default_tears: dict[str, int] = field(default_factory=lambda: {})
 
     def __post_init__(self) -> None:
         if self.max_tear < 1:
@@ -58,6 +64,14 @@ class TearsConfig:
                         f"import_rules[{importer}] = {max_allowed}: "
                         f"max_allowed {max_allowed} exceeds max_tear {self.max_tear}"
                     )
+        if self.default_tear is not None and not 0 <= self.default_tear <= self.max_tear:
+            raise ConfigError(f"default_tear {self.default_tear} exceeds max_tear {self.max_tear}")
+        for path, tear in self.default_tears.items():
+            if not 0 <= tear <= self.max_tear:
+                raise ConfigError(
+                    f"default_tears[{path!r}] = {tear}: "
+                    f"tear level {tear} exceeds max_tear {self.max_tear}"
+                )
 
     def resolved_import_rules(self) -> dict[int, frozenset[int]]:
         """Full matrix with defaults filled in for any unspecified tier."""
@@ -68,6 +82,30 @@ class TearsConfig:
             else:
                 resolved[tier] = frozenset(range(tier + 1))
         return resolved
+
+    def resolve_missing_tier(self, rel_path: str) -> tuple[int, bool]:
+        """Return (effective_tier, was_defaulted) for a file with no @tear header.
+
+        Lookup order: longest-prefix match in default_tears → global default_tear
+        → max_tear (not defaulted; caller should emit the missing-header warning).
+        """
+        file_segs = _path_segments(rel_path)
+        longest_len = -1
+        matched: int | None = None
+        for dir_key, tier in self.default_tears.items():
+            dir_segs = _path_segments(dir_key)
+            if len(dir_segs) > len(file_segs):
+                continue
+            if file_segs[: len(dir_segs)] != dir_segs:
+                continue
+            if len(dir_segs) > longest_len:
+                longest_len = len(dir_segs)
+                matched = tier
+        if matched is not None:
+            return matched, True
+        if self.default_tear is not None:
+            return self.default_tear, True
+        return self.max_tear, False
 
 
 def load_config(repo_root: Path) -> TearsConfig:
@@ -152,6 +190,20 @@ def _from_mapping(raw: dict[str, Any], *, source: str) -> TearsConfig:
 
     if "missing_header" in raw:
         kwargs["missing_header"] = _require_str(raw["missing_header"], "missing_header", source)
+
+    if "default_tear" in raw:
+        kwargs["default_tear"] = _require_int(raw["default_tear"], "default_tear", source)
+
+    if "default_tears" in raw:
+        dt_raw = _require_mapping(raw["default_tears"], "default_tears", source)
+        default_tears: dict[str, int] = {}
+        for key, value in dt_raw.items():
+            if not isinstance(key, str) or not isinstance(value, int) or isinstance(value, bool):
+                raise ConfigError(
+                    f"{source}: default_tears entries must be str -> int, got {key!r} -> {value!r}"
+                )
+            default_tears[key.rstrip("/")] = value
+        kwargs["default_tears"] = default_tears
 
     try:
         return TearsConfig(**kwargs)
