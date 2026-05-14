@@ -3,7 +3,7 @@ name: Test Action
 
 on:
   push:
-    branches: [feat/github-action]
+    branches: [main]
   pull_request:
     branches: [main]
 
@@ -13,7 +13,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: Thillel/tears/.github/actions@feat/github-action
+
+      - name: Set up a minimal clean repo
+        run: |
+          mkdir -p /tmp/clean-repo/src/mylib
+          printf 'max_tear = 3\n\n[imports]\nsource_roots = ["src"]\n' > /tmp/clean-repo/.tears.toml
+          printf '# @tear: 1\n' > /tmp/clean-repo/src/mylib/__init__.py
+          printf '# @tear: 1\nimport os\n' > /tmp/clean-repo/src/mylib/utils.py
+          printf '[build-system]\nrequires = ["setuptools"]\nbuild-backend = "setuptools.backends.legacy:build"\n\n[project]\nname = "mylib"\nversion = "0.1.0"\n' > /tmp/clean-repo/pyproject.toml
+
+      - uses: Thillel/tears/.github/actions@main
+        with:
+          path: /tmp/clean-repo
 
   test-fails:
     name: Action fails on violation
@@ -31,7 +42,7 @@ jobs:
 
       - name: Run action and expect failure
         id: tears-check
-        uses: Thillel/tears/.github/actions@feat/github-action
+        uses: Thillel/tears/.github/actions@main
         with:
           path: /tmp/test-repo
         continue-on-error: true

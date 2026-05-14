@@ -34,3 +34,6 @@ jobs:
 
       - name: Test
         run: uv run pytest
+
+      - name: Tears self-scan
+        run: uv run tears .
