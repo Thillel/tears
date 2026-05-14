@@ -1,16 +1,15 @@
 <!-- @tear: 3 -->
 
-# tears v1 — Implementation Plan
+# tears v0.1.0 — Implementation Plan
 
-A focused build plan for v1. Captures the scope cuts, behavioral decisions, and test strategy
-agreed during spec review. Where this document conflicts with `spec.md` or `test-spec.md`,
-this document wins.
+A focused build plan for v0.1.0. Captures the scope cuts, behavioral decisions, and test strategy
+agreed during spec review. Where this document conflicts with `spec.md`, this document wins.
 
 ---
 
 ## 1. Scope
 
-**v1 is:**
+**v0.1.0 is:**
 - A single CLI command: `tears` (bare, no subcommand — matches mypy/pyright/black/flake8/pylint)
 - A `.tears.toml` config
 - A Claude Code `PostToolUse` hook with **asymmetric scope**: replaces existing
@@ -20,9 +19,9 @@ this document wins.
   `Makefile`, `Dockerfile`, `.gitignore`, etc.)
 - **Scanning** Python source files only (`.py`) — multi-language enforcement is v2
 
-**v1 is not:**
-- `tears init`, `tears promote`, `tears report` — cut
-- `tears check --files` or `tears scan` — no diff-based mode and no subcommands; bare `tears` is the only mode
+**v0.1.0 is not:**
+- `tears promote`, `tears report` — cut
+- `tears check --files` or `tears scan` — no diff-based mode
 - TypeScript / JavaScript / Go / SQL / etc. — Python first, prove the model
 - Diff-aware reverse-dep checking — full scan covers this naturally
 - `test_policy: inherit` — convention is project-specific, hard to define generically
@@ -83,7 +82,7 @@ violations. It doesn't know or care how the graph was built. It has its own unit
 using an **in-memory fake graph** — no filesystem, no parsing, just nodes and edges.
 
 The **builders** below are interchangeable implementations of `ImportGraph`. Pick one
-for v1; the other (or a future tree-sitter builder) can be added later without touching
+for v0.1.0; the other (or a future tree-sitter builder) can be added later without touching
 the checker.
 
 **Decision: Builder B1 (grimp + custom checker + own CLI).** A and B2 remain documented
@@ -282,14 +281,16 @@ source_roots = ["."]
 
 ### 2.7 `tears` behavior
 
-Bare command, no subcommand. Matches mypy/pyright/black/flake8/pylint. v1 has one mode;
-if init/promote/report return, they'd start as `python -m tears.X` invocations. Promotion
-to subcommands only if/when a mode proves popular enough to justify migration.
+Bare `tears [path]` scans. Subcommands (`up`, `down`, `set`, `init`) handle mutation.
 
 **Usage:**
 - `tears` — scan the repo from cwd
 - `tears src/` — scan a specific path
-- `tears file.py` — scan a single file *(not yet implemented; deferred to v1.5 per roadmap §17)*
+- `tears file.py` — scan a single file *(not yet implemented; deferred to v0.2.0 per roadmap §17)*
+- `tears init [path]` — scaffold `.tears.toml`, tag all headerless files at `max_tear`
+- `tears down FILE/DIR --tear N` — promote: mark as more trusted (number goes down)
+- `tears up FILE/DIR --tear N` — demote: mark as less trusted (number goes up)
+- `tears set FILE/DIR --tear N` — set exact level with no direction check
 
 **Pipeline:**
 1. Discover all `.py` files in the repo via grimp over configured `source_roots`. Note:
@@ -370,7 +371,7 @@ For each affected file:
 **Asymmetric scope is deliberate.** Replacement is cheap (one regex, no language
 knowledge needed) and works across every comment syntax. Insertion needs to know the
 comment marker per-extension — but the table is small and additive, so we cover ~50
-common dev file types. The *scanner* (`tears`) is still Python-only in v1 because
+common dev file types. The *scanner* (`tears`) is still Python-only in v0.1.0 because
 resolving imports requires full language semantics; the *hook* doesn't need those.
 
 Idempotent: running the hook twice produces the same content as running it once.
@@ -481,16 +482,18 @@ shared code with the scan pipeline.
 tears/
 ├── __init__.py
 ├── __main__.py            # `python -m tears` entry
-├── cli.py                 # argparse + dispatch for bare `tears`
+├── cli.py                 # argparse + dispatch; subcommands: up, down, set, init
 ├── config.py              # TearsConfig, load_config, validation
 ├── header.py              # parse_tear_level (used by builders)
+├── styles.py              # comment-style constants and lookup tables
+├── mutate.py              # set_tear, process_file, find_repo_root — shared primitives
 ├── graph/                 # ImportGraph protocol + concrete builder
 │   ├── __init__.py        # the Protocol
-│   └── grimp_builder.py   # v1 builder (B1). Adding ast_builder.py later = one new file.
+│   └── grimp_builder.py   # v0.1.0 builder (B1). Adding ast_builder.py later = one new file.
 ├── rules.py               # can_import, check_directory_requirement (pure)
 ├── checker.py             # ImportGraph + config → list of violations
 ├── scan.py                # orchestration + reporter
-└── hook.py                # apply_hook + `python -m tears.hook` entry
+└── hook.py                # entry point only; delegates to mutate.process_file
 ```
 
 `graph/` is the only subpackage — justified by having a Protocol + multiple
@@ -503,20 +506,20 @@ implementations behind it. Everything else stays flat.
 | Question | Decision |
 |---|---|
 | Diff-based check or full scan? | Full scan only |
-| Languages in v1? | Python only |
+| Languages in v0.1.0? | Python only |
 | `init` / `promote` / `report`? | Cut |
 | `test_policy: inherit`? | Cut |
 | Architecture? | `ImportGraph` Protocol + checker, separated by DIP. Builders are interchangeable (§2.2) |
-| CLI shape? | Bare `tears` (no subcommand) — matches mypy/pyright/black/flake8/pylint. Future modes start as `python -m tears.X`; promotion to subcommands only if/when one proves popular. |
+| CLI shape? | Bare `tears [path]` scans; `up`, `down`, `set`, `init` are subcommands. |
 | Import extraction tech? | AST, not regex |
-| Import handling builder for v1? | **B1: grimp + own checker + own CLI.** Behind the `ImportGraph` Protocol — A or B2 can swap in as one new module. See §2.2. |
+| Import handling builder for v0.1.0? | **B1: grimp + own checker + own CLI.** Behind the `ImportGraph` Protocol — A or B2 can swap in as one new module. See §2.2. |
 | Stdlib filtering? | No — extractor returns verbatim, resolver returns `None` for non-`source_roots` paths |
 | `from X import Y` resolution? | Try `X.Y` as file first, fall back to `X` (verify under Option B) |
 | Snapshot format? | Plain text, `expected.txt` + optional `--- stderr ---` block + `--- exit: N ---` line |
 | Config file format? | TOML (`.tears.toml`), parsed via stdlib `tomllib`. No third-party YAML dep. |
 | Malformed config handling? | `tears` hard-fails with exit code 2; hook falls back to defaults so Claude Code never breaks. |
 | Repo root resolution (hook)? | `.git/` preferred over `.tears.toml` (nested configs are legitimate — e.g. test fixtures). |
-| Per-directory exemption? | `.notears` marker file. v1: not parsed — purely a human marker. Exclude patterns in root `.tears.toml` do the actual scan/hook exclusion. Future: tears may read `.notears` content (uses `# @tear: N` format) as directory-level attestation. |
+| Per-directory exemption? | `.notears` marker file. v0.1.0: not parsed — purely a human marker. Exclude patterns in root `.tears.toml` do the actual scan/hook exclusion. Future: tears may read `.notears` content (uses `# @tear: N` format) as directory-level attestation. |
 | Hook on duplicate headers? | Replace all (idempotent) |
 | Hook scope? | Asymmetric: replacement works across any comment style; insertion for ~50 known file types (line + block comment families, plus filename-based for Makefile/Dockerfile/.gitignore/etc.). |
 | Header insertion preserves shebang? | Yes |
@@ -525,7 +528,7 @@ implementations behind it. Everything else stays flat.
 
 ---
 
-## 8. Known Limitations (v1, by choice)
+## 8. Known Limitations (v0.1.0, by choice)
 
 - **Excludes are a tier-laundering vector.** A tier-0 file importing through an excluded
   shim effectively imports anything the shim re-exports. Acceptable; document.

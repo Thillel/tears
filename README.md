@@ -1,6 +1,6 @@
 <!-- @tear: 1 -->
 
-# tears
+# Tears
 
 **Tiered Enforcement, Authorship Review System.**
 *Vibe-Code Responsibly*
@@ -32,11 +32,8 @@ def verify(token: str) -> str:
 
 ## Status
 
-Early. v1 is Python-only and scan-only (no `init` / `promote` / `report`
-subcommands). Not yet on PyPI.
-See [`plan.md`](./plan.md) for the v1 scope and
-roadmap, [`spec.md`](./spec.md) for the broader vision, and
-[`test-spec.md`](./test-spec.md) for the test design.
+Early. Currently supports only Python. Released to PyPI.
+See [`plan.md`](./plan.md) for the scope and roadmap, [`spec.md`](./spec.md) for the broader vision.
 
 ## Hooks
 
@@ -80,35 +77,47 @@ affected file paths to `tears.hook` via CLI args.
 Manual editor changes are untouched by both hooks — only AI tool calls trigger
 the demotion.
 
-## Try it locally
+## Installation
 
 ```bash
-git clone https://github.com/Thillel/tears
-cd tears
-uv sync
-uv run tears path/to/your/repo
+pip install tears-cli
+# or with uv
+uv add --dev tears-cli
+```
+
+## Quick start
+
+```bash
+tears path/to/your/repo              # scan
+tears init path/to/repo              # scaffold .tears.toml + tag all files (prompts for level)
+tears init path/to/repo --tear 1     # scaffold, tag all files at tear 1 (no prompt)
+tears down FILE/DIR --tear 1         # promote: mark as more trusted
+tears up FILE/DIR --tear 3           # demote: mark as less trusted
+tears set FILE/DIR --tear 2          # set exact level, no direction check
 ```
 
 Add a `.tears.toml` at the repo root:
 
 ```toml
+missing_header = "warn"   # or "error"
+
 [directory_requirements]
 "src/auth" = 0
 "src/api" = 1
 
 [imports]
 source_roots = ["src"]
-
-missing_header = "warn"  # or "error"
 ```
 
 ## Development
 
 ```bash
-make test       # pytest
-make lint       # ruff + pyright (strict)
-make fmt        # ruff format + autofix
+git clone https://github.com/Thillel/tears
+cd tears
+uv sync
 make check      # lint + test
+make test       # pytest only
+make fmt        # ruff format + autofix
 ```
 
 ## License
