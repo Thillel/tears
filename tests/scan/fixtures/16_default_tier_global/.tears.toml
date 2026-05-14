@@ -1,0 +1,6 @@
+# @tear: 3
+
+default_tear = 1
+
+[imports]
+source_roots = ["src"]

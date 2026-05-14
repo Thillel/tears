@@ -1,0 +1,9 @@
+# @tear: 3
+
+default_tear = 2
+
+[imports]
+source_roots = ["src"]
+
+[default_tears]
+"src/auth" = 0
