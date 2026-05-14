@@ -16,26 +16,26 @@
 
 ---
 
-### Phase 1: v1.0 — ship to PyPI
+### Phase 1: v0.1.0 — ship to PyPI
 
 | # | What | Status | Why |
 |---|------|--------|-----|
-| 6 | **`tears init`** — scaffolds `.tears.toml`, adds `@tear: N` headers to all existing files, optionally registers the hook | — | The #1 onboarding gate. Less urgent now that `default_tear` lets you scan without tagging every file, but still needed for teams that want explicit headers everywhere. |
+| 6 | **`tears init`** — scaffolds `.tears.toml`, adds `@tear: N` headers to all existing files, optionally registers the hook | ✅ done | The #1 onboarding gate. Less urgent now that `default_tear` lets you scan without tagging every file, but still needed for teams that want explicit headers everywhere. |
 | 6a | **`default_tear` / `default_tears` / `--default-tear`** — assume a tier for headerless files, globally or per folder | ✅ done | Lets teams try tears on an existing codebase in minutes without touching a single source file. |
-| 7 | **PyPI package** — `uv build && uv publish` as `tears-cli` | ✅ workflows in place (`0.1.0a1`) | Can't be installed outside this repo. |
+| 7 | **PyPI package** — `uv build && uv publish` as `tears-cli` | ✅ deployed (`0.1.0a1`; targeting `v0.1.0`) | Can't be installed outside this repo. |
 | 8 | **Pre-commit hook** — `.pre-commit-hooks.yaml` + `tears pre-commit` entry point | ✅ done | Catches violations in milliseconds, not CI-minutes. Reaches teams without Claude Code. |
-| 9 | **GitHub Action** — reusable workflow that runs `tears` on PRs | 🔄 branch ready | Required for CI integration. |
-| 10 | **Fix `.gitignore` handling** — add `git check-ignore` filtering in the graph builder, or formally document the deferral | — | Scanning `.venv/` or `node_modules/` is broken and slow. **Blocking v1.0.** |
+| 9 | **GitHub Action** — reusable workflow that runs `tears` on PRs | ✅ done | Required for CI integration. |
+| 10 | **Fix `.gitignore` handling** — add `git check-ignore` filtering in the graph builder, or formally document the deferral | ✅ done | Scanning `.venv/` or `node_modules/` is broken and slow. |
 | 11 | **ANSI colored output** — red FAIL / yellow WARN / green OK | ✅ done | 20-line change, big impact on perceived quality. |
 | 12 | **`--version` flag** | ✅ done | Baseline CLI hygiene. |
 
 ---
 
-### Phase 2: v1.5 — usability
+### Phase 2: v0.2.0 — usability
 
 | # | What | Why |
 |---|------|-----|
-| 13 | **`tears promote FILE TIER`** — explicit tier promotion with audit trail | Clean promotion ceremony without hand-editing headers. |
+| 13 | **`tears promote FILE TIER`** — superseded by `tears down FILE --tear N` (already shipped) | — |
 | 14 | **`tears report`** — tier distribution summary | The "look, 80% of our code is reviewed" evidence for team buy-in. |
 | 15 | **`--changed` / `--diff` mode** — compare against git base branch, check only touched files | Fast CI for PRs. Without this, a full scan is the only option. |
 | 16 | **`test_policy`** — at minimum auto-exclude `test_*` files from import violations | The #1 false positive in any real codebase. |
@@ -58,7 +58,7 @@
 
 ---
 
-### Phase 4: v2 — multi-language & advanced
+### Phase 4: v1.0 — multi-language & advanced
 
 | # | What | Why |
 |---|------|-----|
@@ -76,7 +76,7 @@
 
 Within each phase, build top-down. Each item assumes everything above it is done.
 
-Phase 1 is the minimum shippable tool: `init` + PyPI + pre-commit + GitHub Action + gitignore + colors + `--version`. Of these, only `init` (6) and `.gitignore` (10) remain. `.gitignore` is the hard blocker — the tool silently hangs or floods output on any real project with a virtualenv.
+Phase 1 is complete. All items shipped: `init`, PyPI , pre-commit, GitHub Action, `.gitignore` filtering, colors, and `--version`. Next: cut `v0.1.0` stable.
 
 Phase 2 rounds out usability gaps that emerge from real usage.
 
@@ -88,7 +88,6 @@ Phase 4 is the big expansion.
 
 ## What NOT to do
 
-- **IDE integrations before PyPI release.** Nobody can use them without the tool installed.
 - **Tear decay.** Complex semantics, unclear value proposition.
 - **PR comment bot.** Only helps teams already using tears. Build the core first.
 - **Hook insertion for more file types.** 50+ is enough.

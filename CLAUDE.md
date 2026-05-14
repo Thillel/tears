@@ -58,7 +58,7 @@ tears [path] → cli.main() → run_scan() → load_config() → build ImportGra
 
 | Layer | File | Role |
 |-------|------|------|
-| Entry | `cli.py` | argparse, dispatch, exit codes (0=clean, 1=violations, 2=config error) |
+| Entry | `cli.py` | argparse, dispatch, subcommands (`up`, `down`, `set`, `init`), exit codes (0=clean, 1=violations, 2=config error) |
 | Config | `config.py` | TearsConfig dataclass, parses `.tears.toml` via stdlib `tomllib` |
 | Scan | `scan.py` | Orchestration: load config → build graph → check → format output |
 | Graph | `graph/__init__.py` | `ImportGraph` protocol (DIP) |
@@ -66,7 +66,9 @@ tears [path] → cli.main() → run_scan() → load_config() → build ImportGra
 | Rules | `rules.py` | `can_import()`, `check_directory_requirement()` — pure functions |
 | Checker | `checker.py` | `check(graph, config) -> CheckReport` — composes rules over the graph |
 | Header | `header.py` | `parse_tear_level(text) -> int | None` — regex over first 5 lines |
-| Hook | `hook.py` | `apply_hook()`, `process_file()` — auto-demotes @tear on edit |
+| Styles | `styles.py` | Comment-style constants and lookup tables for all known file types |
+| Mutate | `mutate.py` | `set_tear()`, `process_file()`, `find_repo_root()` — shared mutation primitives |
+| Hook | `hook.py` | Entry point only — reads stdin/argv, delegates to `mutate.process_file` |
 
 ## PostToolUse hooks
 
@@ -79,9 +81,13 @@ Both rewrite any `@tear: N` header to `@tear: 3` (or insert one if missing, for 
 ## CLI
 
 ```sh
-tears [path]              # scan a directory (default .)
-uv run python -m tears    # same via module invocation
-uv run python -m tears.hook FILE [FILE ...]  # manual hook invocation
+tears [path]                          # scan a directory (default .)
+tears init [path]                     # scaffold .tears.toml, tag all headerless files
+tears down FILE/DIR --tear N          # promote: mark as more trusted (number goes down)
+tears up FILE/DIR --tear N            # demote: mark as less trusted (number goes up)
+tears set FILE/DIR --tear N           # set exact level, no direction check
+uv run python -m tears                # same as bare `tears`
+uv run python -m tears.hook [FILE …]  # manual hook invocation
 ```
 
 ## Reference
