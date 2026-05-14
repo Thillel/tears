@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import os
 import shutil
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -45,12 +46,17 @@ def test_fixture(fixture: str, tmp_path: Path, capsys: pytest.CaptureFixture[str
     if (work / "expected.txt").exists():
         (work / "expected.txt").unlink()
 
+    if (work / "_gitignore").exists():
+        (work / "_gitignore").rename(work / ".gitignore")
+        subprocess.run(["git", "init", "-q"], cwd=work, check=True)
+        subprocess.run(["git", "add", ".gitignore"], cwd=work, check=True)
+
     exit_code = cli_main([str(work)])
     captured = capsys.readouterr()
     stderr_block = f"--- stderr ---\n{captured.err}" if captured.err else ""
     actual = f"{captured.out}{stderr_block}{EXIT_MARKER} {exit_code} ---\n"
 
-    if os.environ.get("TEARS_UPDATE_SNAPSHOTS"):
+    if updating:
         expected_path.write_text(actual)
         return
 

@@ -1,0 +1,4 @@
+# @tear: 1
+
+[imports]
+source_roots = ["."]

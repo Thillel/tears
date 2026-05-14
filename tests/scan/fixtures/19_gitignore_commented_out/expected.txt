@@ -1,0 +1,13 @@
+WARN  ext_env/__init__.py
+  - missing @tear header (treated as tear 3)
+
+WARN  ext_env/site_pkg/__init__.py
+  - missing @tear header (treated as tear 3)
+
+FAIL  ext_env/site_pkg/some_module/__init__.py (tear 1)
+  - imports ext_env/site_pkg/some_module/tear_3_vibecoded.py (tear 3): tear 1 cannot import from tear 3
+
+OK    ext_env/site_pkg/some_module/tear_3_vibecoded.py (tear 3)
+OK    myapp/__init__.py (tear 2)
+5 files checked, 1 failure, 2 warnings
+--- exit: 1 ---
