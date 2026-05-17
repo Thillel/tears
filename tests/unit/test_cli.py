@@ -87,6 +87,19 @@ def test_up_rejects_lower_number(tmp_path: Path, capsys: pytest.CaptureFixture[s
     assert "tears down" in capsys.readouterr().err
 
 
+def test_up_rejects_lower_number_for_defaulted_headerless_file(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    (tmp_path / ".tears.toml").write_text("default_tear = 1\n")
+    f = tmp_path / "x.py"
+    f.write_text("import os\n")
+    assert cli_main(["up", str(f), "--tear", "0"]) == 1
+    assert f.read_text() == "import os\n"
+    err = capsys.readouterr().err
+    assert "implicit 1" in err
+    assert "tears down" in err
+
+
 def test_up_requires_tear_arg(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     f = tmp_path / "x.py"
     f.write_text("# @tear: 3\nimport os\n")
@@ -182,6 +195,33 @@ def test_down_headerless_file_treated_as_max(tmp_path: Path) -> None:
     assert f.read_text() == "# @tear: 1\nimport os\n"
 
 
+def test_down_respects_global_default_for_headerless_file(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    (tmp_path / ".tears.toml").write_text("default_tear = 1\n")
+    f = tmp_path / "x.py"
+    f.write_text("import os\n")
+    assert cli_main(["down", str(f), "--tear", "1"]) == 1
+    assert f.read_text() == "import os\n"
+    err = capsys.readouterr().err
+    assert "implicit 1" in err
+    assert "tears up" in err
+
+
+def test_down_respects_path_specific_default_for_headerless_file(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    (tmp_path / ".tears.toml").write_text('[default_tears]\n"src/auth" = 0\n')
+    f = tmp_path / "src" / "auth" / "tokens.py"
+    f.parent.mkdir(parents=True)
+    f.write_text("SECRET = 'x'\n")
+    assert cli_main(["down", str(f), "--tear", "0"]) == 1
+    assert f.read_text() == "SECRET = 'x'\n"
+    err = capsys.readouterr().err
+    assert "implicit 0" in err
+    assert "tears up" in err
+
+
 def test_down_rejects_same_tear(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     f = tmp_path / "x.py"
     f.write_text("# @tear: 1\nimport os\n")
@@ -227,6 +267,14 @@ def test_down_missing_only_dir_preserves_existing_tiers(tmp_path: Path) -> None:
     assert (sub / "reviewed.py").read_text() == "# @tear: 0\nx = 1\n"
     assert (sub / "eyeballed.py").read_text() == "# @tear: 2\ny = 2\n"
     assert (sub / "missing.py").read_text() == "# @tear: 1\nz = 3\n"
+
+
+@pytest.mark.parametrize("cmd", ["up", "down", "set"])
+def test_mutation_command_skips_non_utf8_file(tmp_path: Path, cmd: str) -> None:
+    f = tmp_path / "binary.py"
+    f.write_bytes(b"\xff\xfe\x00")
+    assert cli_main([cmd, str(f), "--tear", "1"]) == 0
+    assert f.read_bytes() == b"\xff\xfe\x00"
 
 
 # --- tears init ---

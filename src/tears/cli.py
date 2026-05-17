@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import os
 import sys
+from dataclasses import dataclass
 from importlib.metadata import version as _pkg_version
 from pathlib import Path
 
@@ -36,6 +37,13 @@ missing_header = "warn"
 # "src/auth" = 0
 # "src/api" = 1
 """
+
+
+@dataclass(frozen=True)
+class _CurrentTier:
+    explicit: int | None
+    effective: int
+    defaulted: bool
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -172,18 +180,16 @@ def _apply_up_file(
     bulk: bool,
     missing_only: bool,
 ) -> int:
-    try:
-        content = path.read_text()
-    except OSError as exc:
-        print(f"error: {exc}", file=sys.stderr)
-        return 1
-    current = parse_tear_level(content, max_tear=config.max_tear)
-    if missing_only and current is not None:
+    content = _read_text_or_skip(path)
+    if content is None:
         return 0
-    if current is not None and target < current:
+    current = _current_tier(path, content, config, repo_root)
+    if missing_only and current.explicit is not None:
+        return 0
+    if target < current.effective:
         if not bulk:
             print(
-                f"error: {path.name} is already at tear {current}; "
+                f"error: {path.name} is already at tear {_tier_label(current)}; "
                 f"to lower the number use 'tears down'",
                 file=sys.stderr,
             )
@@ -191,7 +197,7 @@ def _apply_up_file(
         return 0  # silently skip in bulk mode
     changed = process_file(path, tear=target, exclude=config.exclude, repo_root=repo_root)
     if changed:
-        prev = str(current) if current is not None else "∅"
+        prev = str(current.explicit) if current.explicit is not None else "∅"
         print(f"{path.name}  {prev} → {target}")
     return 0
 
@@ -237,27 +243,24 @@ def _apply_down_file(
     bulk: bool,
     missing_only: bool,
 ) -> int:
-    try:
-        content = path.read_text()
-    except OSError as exc:
-        print(f"error: {exc}", file=sys.stderr)
-        return 1
-    current = parse_tear_level(content, max_tear=config.max_tear)
-    if missing_only and current is not None:
+    content = _read_text_or_skip(path)
+    if content is None:
         return 0
-    effective_current = current if current is not None else config.max_tear
-    if target >= effective_current:
+    current = _current_tier(path, content, config, repo_root)
+    if missing_only and current.explicit is not None:
+        return 0
+    if target >= current.effective:
         if not bulk:
-            noun = str(current) if current is not None else f"∅ (implicit {config.max_tear})"
             print(
-                f"error: {path.name} is at tear {noun}; to raise the number use 'tears up'",
+                f"error: {path.name} is at tear {_tier_label(current)}; "
+                "to raise the number use 'tears up'",
                 file=sys.stderr,
             )
             return 1
         return 0  # silently skip in bulk mode
     changed = process_file(path, tear=target, exclude=config.exclude, repo_root=repo_root)
     if changed:
-        prev = str(current) if current is not None else "∅"
+        prev = str(current.explicit) if current.explicit is not None else "∅"
         print(f"{path.name}  {prev} → {target}")
     return 0
 
@@ -317,17 +320,15 @@ def _apply_set_file(
     *,
     missing_only: bool,
 ) -> int:
-    try:
-        content = path.read_text()
-    except OSError as exc:
-        print(f"error: {exc}", file=sys.stderr)
-        return 1
-    current = parse_tear_level(content, max_tear=config.max_tear)
-    if missing_only and current is not None:
+    content = _read_text_or_skip(path)
+    if content is None:
+        return 0
+    current = _current_tier(path, content, config, repo_root)
+    if missing_only and current.explicit is not None:
         return 0
     changed = process_file(path, tear=target, exclude=config.exclude, repo_root=repo_root)
     if changed:
-        prev = str(current) if current is not None else "∅"
+        prev = str(current.explicit) if current.explicit is not None else "∅"
         print(f"{path.name}  {prev} → {target}")
     return 0
 
@@ -343,6 +344,37 @@ def _walk(root: Path, config: TearsConfig, repo_root: Path) -> list[Path]:
             continue
         results.append(file_path)
     return results
+
+
+def _read_text_or_skip(path: Path) -> str | None:
+    try:
+        return path.read_text()
+    except UnicodeDecodeError:
+        return None
+    except OSError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return None
+
+
+def _current_tier(path: Path, content: str, config: TearsConfig, repo_root: Path) -> _CurrentTier:
+    explicit = parse_tear_level(content, max_tear=config.max_tear)
+    if explicit is not None:
+        return _CurrentTier(explicit=explicit, effective=explicit, defaulted=False)
+    effective, defaulted = config.resolve_missing_tier(_relative_posix(path, repo_root))
+    return _CurrentTier(explicit=None, effective=effective, defaulted=defaulted)
+
+
+def _tier_label(current: _CurrentTier) -> str:
+    if current.explicit is not None:
+        return str(current.explicit)
+    return f"∅ (implicit {current.effective})"
+
+
+def _relative_posix(path: Path, root: Path) -> str:
+    try:
+        return path.resolve().relative_to(root.resolve()).as_posix()
+    except ValueError:
+        return path.as_posix()
 
 
 def _cmd_init(argv: list[str]) -> int:

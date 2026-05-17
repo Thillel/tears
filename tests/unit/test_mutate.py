@@ -263,3 +263,10 @@ def test_process_file_noop_when_already_at_target(tmp_path: Path) -> None:
 
 def test_process_file_noop_on_missing_path(tmp_path: Path) -> None:
     assert process_file(tmp_path / "ghost.py", tear=3, exclude=[], repo_root=tmp_path) is False
+
+
+def test_process_file_skips_non_utf8_file(tmp_path: Path) -> None:
+    target = tmp_path / "binary.py"
+    target.write_bytes(b"\xff\xfe\x00")
+    assert process_file(target, tear=3, exclude=[], repo_root=tmp_path) is False
+    assert target.read_bytes() == b"\xff\xfe\x00"

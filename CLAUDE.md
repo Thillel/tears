@@ -84,7 +84,7 @@ Both rewrite any `@tear: N` header to `@tear: 3` (or insert one if missing, for 
 
 ```sh
 tears [path]                          # scan a directory (default .)
-tears init [path]                     # current: scaffold .tears.toml, tag headerless files
+tears init [path]                     # scaffold .tears.toml
 tears down FILE/DIR --tear N          # promote: mark as more trusted (number goes down)
 tears up FILE/DIR --tear N            # demote: mark as less trusted (number goes up)
 tears set FILE/DIR --tear N           # set exact level, no direction check

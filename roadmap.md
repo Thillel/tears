@@ -52,17 +52,6 @@ durable design rationale belongs in [DESIGN.md](./DESIGN.md).
    explicitly allowed by configuration, then expose enough graph information for the
    checker to report it.
 
-7. Make mutation commands respect effective defaults.
-
-   `tears down`, `up`, and `set` should make direction and current-tier decisions using
-   the same effective tier semantics as scan, including `default_tear` and
-   `default_tears`.
-
-8. Make mutation commands consistently safe for non-text files.
-
-   `init`, `up`, `down`, `set`, and hooks should share predictable binary and non-UTF-8
-   skip behavior instead of failing differently depending on the command path.
-
 ## Usability
 
 1. Add `tears report`.

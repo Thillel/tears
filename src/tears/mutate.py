@@ -77,7 +77,10 @@ def process_file(
         return False
     if is_excluded(path, repo_root, exclude):
         return False
-    content = path.read_text()
+    try:
+        content = path.read_text()
+    except UnicodeDecodeError:
+        return False
     new_content = set_tear(content, tear=tear, extension=path.suffix, filename=path.name)
     if new_content == content:
         return False
