@@ -9,15 +9,33 @@ import sys
 from importlib.metadata import version as _pkg_version
 from pathlib import Path
 
-from tears.config import ConfigError, TearsConfig, load_config
+from tears.config import CONFIG_FILENAME, ConfigError, TearsConfig, load_config
 from tears.exclude import is_excluded
 from tears.header import parse_tear_level
-from tears.mutate import find_repo_root, process_file, set_tear
+from tears.mutate import find_repo_root, process_file
 from tears.scan import run_scan
 
 _SUBCOMMANDS = frozenset({"up", "down", "set", "init"})
 
-_DEFAULT_TOML = "# @tear: 3\nmax_tear = 3\n"
+_DEFAULT_TOML = """# @tear: 3
+max_tear = 3
+
+# Soft trial mode: existing files without @tear headers are treated as reviewed.
+# Full adoption:
+#   1. Run: tears set . --tear 1 --missing-only
+#   2. Change default_tear to 3, or remove it and set missing_header = "error".
+default_tear = 1
+missing_header = "warn"
+
+# Tell tears where your importable Python packages live.
+# [imports]
+# source_roots = ["src"]
+
+# Require sensitive directories to stay at stricter tiers.
+# [directory_requirements]
+# "src/auth" = 0
+# "src/api" = 1
+"""
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -82,11 +100,16 @@ def _cmd_scan(argv: list[str]) -> int:
 
 def _parse_mutate_argv(
     argv: list[str], prog: str, desc: str
-) -> tuple[Path, int, TearsConfig, Path] | int:
+) -> tuple[Path, int, TearsConfig, Path, bool] | int:
     """Parse path + --tear, load config. Returns (path, target, config, repo_root) or exit code."""
     parser = argparse.ArgumentParser(prog=prog, description=desc)
     parser.add_argument("path", type=Path, help="File or directory to mark.")
     parser.add_argument("--tear", type=int, required=True, metavar="N", help="Target tear level.")
+    parser.add_argument(
+        "--missing-only",
+        action="store_true",
+        help="Only tag files that do not already have a @tear header.",
+    )
     try:
         args = parser.parse_args(argv)
     except SystemExit as exc:
@@ -105,7 +128,7 @@ def _parse_mutate_argv(
         print(f"error: tear {target} out of range [0, {config.max_tear}]", file=sys.stderr)
         return 2
 
-    return path, target, config, repo_root
+    return path, target, config, repo_root, bool(args.missing_only)
 
 
 def _cmd_up(argv: list[str]) -> int:
@@ -116,18 +139,38 @@ def _cmd_up(argv: list[str]) -> int:
     )
     if isinstance(ctx, int):
         return ctx
-    path, target, config, repo_root = ctx
+    path, target, config, repo_root, missing_only = ctx
 
     if path.is_file():
-        return _apply_up_file(path, target, config, repo_root, bulk=False)
+        return _apply_up_file(
+            path,
+            target,
+            config,
+            repo_root,
+            bulk=False,
+            missing_only=missing_only,
+        )
 
     for file_path in _walk(path, config, repo_root):
-        _apply_up_file(file_path, target, config, repo_root, bulk=True)
+        _apply_up_file(
+            file_path,
+            target,
+            config,
+            repo_root,
+            bulk=True,
+            missing_only=missing_only,
+        )
     return 0
 
 
 def _apply_up_file(
-    path: Path, target: int, config: TearsConfig, repo_root: Path, *, bulk: bool
+    path: Path,
+    target: int,
+    config: TearsConfig,
+    repo_root: Path,
+    *,
+    bulk: bool,
+    missing_only: bool,
 ) -> int:
     try:
         content = path.read_text()
@@ -135,6 +178,8 @@ def _apply_up_file(
         print(f"error: {exc}", file=sys.stderr)
         return 1
     current = parse_tear_level(content, max_tear=config.max_tear)
+    if missing_only and current is not None:
+        return 0
     if current is not None and target < current:
         if not bulk:
             print(
@@ -159,18 +204,38 @@ def _cmd_down(argv: list[str]) -> int:
     )
     if isinstance(ctx, int):
         return ctx
-    path, target, config, repo_root = ctx
+    path, target, config, repo_root, missing_only = ctx
 
     if path.is_file():
-        return _apply_down_file(path, target, config, repo_root, bulk=False)
+        return _apply_down_file(
+            path,
+            target,
+            config,
+            repo_root,
+            bulk=False,
+            missing_only=missing_only,
+        )
 
     for file_path in _walk(path, config, repo_root):
-        _apply_down_file(file_path, target, config, repo_root, bulk=True)
+        _apply_down_file(
+            file_path,
+            target,
+            config,
+            repo_root,
+            bulk=True,
+            missing_only=missing_only,
+        )
     return 0
 
 
 def _apply_down_file(
-    path: Path, target: int, config: TearsConfig, repo_root: Path, *, bulk: bool
+    path: Path,
+    target: int,
+    config: TearsConfig,
+    repo_root: Path,
+    *,
+    bulk: bool,
+    missing_only: bool,
 ) -> int:
     try:
         content = path.read_text()
@@ -178,6 +243,8 @@ def _apply_down_file(
         print(f"error: {exc}", file=sys.stderr)
         return 1
     current = parse_tear_level(content, max_tear=config.max_tear)
+    if missing_only and current is not None:
+        return 0
     effective_current = current if current is not None else config.max_tear
     if target >= effective_current:
         if not bulk:
@@ -196,30 +263,68 @@ def _apply_down_file(
 
 
 def _cmd_set(argv: list[str]) -> int:
-    ctx = _parse_mutate_argv(
-        argv,
-        "tears set",
-        "Set a file or directory to an exact tear level (no direction check).",
-    )
+    ctx = _parse_set_argv(argv)
     if isinstance(ctx, int):
         return ctx
-    path, target, config, repo_root = ctx
+    path, target, config, repo_root, missing_only = ctx
 
     if path.is_file():
-        return _apply_set_file(path, target, config, repo_root)
+        return _apply_set_file(path, target, config, repo_root, missing_only=missing_only)
 
     for file_path in _walk(path, config, repo_root):
-        _apply_set_file(file_path, target, config, repo_root)
+        _apply_set_file(file_path, target, config, repo_root, missing_only=missing_only)
     return 0
 
 
-def _apply_set_file(path: Path, target: int, config: TearsConfig, repo_root: Path) -> int:
+def _parse_set_argv(argv: list[str]) -> tuple[Path, int, TearsConfig, Path, bool] | int:
+    parser = argparse.ArgumentParser(
+        prog="tears set",
+        description="Set a file or directory to an exact tear level (no direction check).",
+    )
+    parser.add_argument("path", type=Path, help="File or directory to mark.")
+    parser.add_argument("--tear", type=int, required=True, metavar="N", help="Target tear level.")
+    parser.add_argument(
+        "--missing-only",
+        action="store_true",
+        help="Only tag files that do not already have a @tear header.",
+    )
+    try:
+        args = parser.parse_args(argv)
+    except SystemExit as exc:
+        return int(exc.code) if isinstance(exc.code, int) else 2
+
+    path = args.path.resolve()
+    repo_root = find_repo_root(path)
+    try:
+        config = load_config(repo_root)
+    except ConfigError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+
+    target = args.tear
+    if not 0 <= target <= config.max_tear:
+        print(f"error: tear {target} out of range [0, {config.max_tear}]", file=sys.stderr)
+        return 2
+
+    return path, target, config, repo_root, bool(args.missing_only)
+
+
+def _apply_set_file(
+    path: Path,
+    target: int,
+    config: TearsConfig,
+    repo_root: Path,
+    *,
+    missing_only: bool,
+) -> int:
     try:
         content = path.read_text()
     except OSError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
     current = parse_tear_level(content, max_tear=config.max_tear)
+    if missing_only and current is not None:
+        return 0
     changed = process_file(path, tear=target, exclude=config.exclude, repo_root=repo_root)
     if changed:
         prev = str(current) if current is not None else "∅"
@@ -241,10 +346,10 @@ def _walk(root: Path, config: TearsConfig, repo_root: Path) -> list[Path]:
 
 
 def _cmd_init(argv: list[str]) -> int:
-    """Scaffold .tears.toml and tag all headerless files."""
+    """Scaffold .tears.toml without rewriting source files."""
     parser = argparse.ArgumentParser(
         prog="tears init",
-        description="Scaffold .tears.toml and insert @tear headers on untagged files.",
+        description="Scaffold .tears.toml for low-churn adoption.",
     )
     parser.add_argument(
         "path",
@@ -253,88 +358,20 @@ def _cmd_init(argv: list[str]) -> int:
         type=Path,
         help="Repo root (default: .).",
     )
-    parser.add_argument(
-        "--tear",
-        type=int,
-        default=None,
-        metavar="N",
-        help="Tear level to assign (default: max_tear from config).",
-    )
-    args = parser.parse_args(argv)
+    try:
+        args = parser.parse_args(argv)
+    except SystemExit as exc:
+        return int(exc.code) if isinstance(exc.code, int) else 2
 
     repo_root = args.path.resolve()
 
-    config_path = repo_root / ".tears.toml"
+    config_path = repo_root / CONFIG_FILENAME
     if not config_path.exists():
         config_path.write_text(_DEFAULT_TOML)
         print(f"created {config_path.name}")
     else:
         print(f"{config_path.name} already exists, skipping")
-
-    try:
-        config = load_config(repo_root)
-    except ConfigError as exc:
-        print(f"error: {exc}", file=sys.stderr)
-        return 2
-
-    if args.tear is not None:
-        target = args.tear
-        if not 0 <= target <= config.max_tear:
-            print(f"error: tear {target} out of range [0, {config.max_tear}]", file=sys.stderr)
-            return 2
-    elif sys.stdin.isatty():
-        target = _prompt_init_tear(config.max_tear)
-    else:
-        target = config.max_tear
-
-    count = 0
-    for file_path in _walk(repo_root, config, repo_root):
-        try:
-            content = file_path.read_text()
-        except (OSError, UnicodeDecodeError):
-            continue
-        if parse_tear_level(content, max_tear=config.max_tear) is not None:
-            continue
-        new_content = set_tear(
-            content,
-            tear=target,
-            extension=file_path.suffix,
-            filename=file_path.name,
-        )
-        if new_content != content:
-            file_path.write_text(new_content)
-            count += 1
-
-    noun = "file" if count == 1 else "files"
-    print(f"tagged {count} {noun} at tear {target}")
     return 0
-
-
-def _prompt_init_tear(max_tear: int) -> int:
-    print()
-    print("What tear level should untagged files start at?")
-    print()
-    print("  1 — Reviewed    human-written, has passed code review    (recommended)")
-    print("  2 — Eyeballed   checked for obvious issues, not line-by-line")
-    print("  3 — Unreviewed  AI-generated or vibe-coded")
-    print()
-    while True:
-        try:
-            raw = input("tear level [1]: ").strip()
-        except (EOFError, KeyboardInterrupt):
-            print()
-            return 1
-        level = 1 if not raw else None
-        if level is None:
-            try:
-                level = int(raw)
-            except ValueError:
-                print(f"  Enter a number between 0 and {max_tear}.")
-                continue
-        if not 0 <= level <= max_tear:
-            print(f"  Enter a number between 0 and {max_tear}.")
-            continue
-        return level
 
 
 if __name__ == "__main__":

@@ -7,7 +7,6 @@ locates the nearest .git dir or .tears.toml.
 
 The hook always calls process_file with tear=max_tear. The CLI subcommands
 `tears up`, `tears down`, and `tears set` call it after validating direction.
-`tears init` calls set_tear directly (it already holds the file content).
 """
 
 from __future__ import annotations

@@ -36,8 +36,7 @@ code was touched and not yet re-reviewed.
 ## Commands
 
 ```sh
-make lint        # ruff check + pyright strict (typechecks src+tests)
-make fmt         # ruff format + ruff check --fix
+make lint        # ruff format + ruff check --fix + pyright strict typecheck
 make test        # uv run pytest (unit + integration)
 make check       # lint + test (sequential)
 make update-snapshots  # TEARS_UPDATE_SNAPSHOTS=1 pytest tests/scan — regen after output changes

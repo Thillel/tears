@@ -13,7 +13,7 @@ nothing stops a carelessly imported module from pulling unreviewed code into you
 sensitive systems.
 
 `tears` lets you vibe-code where it's safe and stay careful where it matters. Files
-declare a trust tier via a `@tear` header. AI tools automatically demote files they
+declare a trust tier via a `@tear` header. Agents automatically demote files they
 touch. Humans restore the tier after review — or don't.
 CI enforces that trusted code can't depend on untrusted code.
 
@@ -50,51 +50,27 @@ rules haven't quietly started depending on code that nobody actually read.
 The tiers aren't a judgment about code quality. Tier 3 code might be perfectly fine.
 It just hasn't been through the process yet — and until it has, it stays in its lane.
 
-## Installation
+## Quick Start
 
 ```bash
 pip install tears-cli
+tears init  # create default config
+tears       # scan your repo
 ```
 
-or:
-
-```bash
-uv add --dev tears-cli
-```
-
-## Quick Start
-
-Create `.tears.toml`:
-
-```toml
-# @tear: 3
-# Soft trial mode: existing files without @tear headers are treated as reviewed.
-default_tear = 1
-missing_header = "warn"
-
-[directory_requirements]
-"src/auth" = 0
-"src/api" = 1
-
-[imports]
-source_roots = ["src"]
-```
-
-Run a full scan:
-
-```bash
-tears
-```
-
-Add the AI edit hook, pre-commit hook, or GitHub Action below when you are ready to
-enforce it automatically.
+No more tears!
 
 ## Adoption Modes
 
-Soft trial mode uses `default_tear = 1`, so existing headerless files can be treated as
-reviewed without rewriting the repo.
+Soft trial mode uses `default_tear = 1`, so existing headerless files are treated as
+reviewed while you try the tool. The starter config also includes commented examples for
+source roots and directory requirements; uncomment and edit them when you are ready to
+enforce project-specific boundaries.
 
-Full adoption will use a missing-only tagging flow once implemented:
+If the scan checks `0 files`, uncomment `source_roots` in `.tears.toml` and point it at
+your importable Python package root.
+
+Full adoption tags only files that do not already have a deliberate tier:
 
 ```bash
 tears set . --tear 1 --missing-only
@@ -106,14 +82,11 @@ Then change `default_tear` to `3`, or remove it and set:
 missing_header = "error"
 ```
 
-Current note: `tears init` still tags existing files. Before stable release, init will
-become a low-churn config-only command that writes `default_tear = 1` instead. Until
-then, create `.tears.toml` directly if you want to try `tears` without rewriting source
-files.
+Then set up your agent hook, pre-commit, and GitHub Actions.
 
 ## Hooks
 
-Hooks demote files after AI tool edits. They mutate headers; they do not run the scanner.
+Hooks demote files after agents edit. They mutate headers; they do not run the scanner.
 They require `uv run python -m tears.hook` or the tool-specific wrapper to work from the
 repo where the edit happens.
 
@@ -159,6 +132,12 @@ uv run python -m tears.codex_hook
 The wrapper reads Codex's PostToolUse stdin payload, extracts file paths from the patch,
 and delegates header mutation to the shared hook logic.
 
+Current Codex hook limitations:
+
+- it is repo-local rather than a packaged installer;
+- it currently handles `apply_patch` edits only;
+- Codex prompts to enable the hook on startup, so a user must opt in before it runs.
+
 ### OpenCode
 
 This repo includes an OpenCode plugin at `.opencode/plugins/tears-hook.js`. Place that
@@ -176,12 +155,6 @@ Current OpenCode plugin limitations:
 - it is repo-local rather than a packaged installer;
 - it currently handles one path from an `apply_patch`;
 - it still needs cleanup before being treated as polished integration code.
-
-Current Codex hook limitations:
-
-- it is repo-local rather than a packaged installer;
-- it currently handles `apply_patch` edits only;
-- Codex prompts to enable the hook on startup, so a user must opt in before it runs.
 
 ## Pre-commit and CI
 
@@ -232,7 +205,7 @@ be the repo root.
 | `0` | Deeply reviewed. Security-critical or domain-owner reviewed. |
 | `1` | Reviewed by a human, line by line. |
 | `2` | Eyeballed for exfiltration, network calls, and obvious security issues. |
-| `3` | Unreviewed. AI-generated or AI-touched. |
+| `3` | Vibe Coded. |
 
 Lower numbers are more trusted.
 
@@ -276,7 +249,11 @@ tears                            # scan the repo
 tears down FILE_OR_DIR --tear 1  # promote: more trusted
 tears up FILE_OR_DIR --tear 3    # demote: less trusted
 tears set FILE_OR_DIR --tear 2   # exact level
+tears set . --tear 1 --missing-only
 ```
+
+`--missing-only` is available for `up`, `down`, and `set`; it tags only files that lack
+an existing `@tear` header.
 
 ## Configuration
 
@@ -338,7 +315,6 @@ cd tears
 uv sync
 make check
 make test
-make fmt
 ```
 
 `make check` runs formatting, linting, strict type checking, and tests.

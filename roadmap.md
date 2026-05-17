@@ -1,4 +1,4 @@
-<!-- @tear: 1 -->
+<!-- @tear: 3 -->
 
 # Roadmap
 
@@ -7,27 +7,7 @@ durable design rationale belongs in [DESIGN.md](./DESIGN.md).
 
 ## Near Term
 
-1. Make `tears init` non-mutating by default and add `--missing-only`.
-
-   `tears init` should create `.tears.toml` only, using `default_tear = 1` so existing
-   headerless files can be scanned immediately without a large mechanical diff. Rewriting
-   existing files should require an explicit follow-up command.
-
-   The generated TOML should explain both adoption modes:
-
-   ```toml
-   # Soft trial mode: existing files without @tear headers are treated as reviewed.
-   # Full adoption:
-   #   1. Run: tears set . --tear 1 --missing-only
-   #   2. Change default_tear to 3, or remove it and set missing_header = "error".
-   default_tear = 1
-   missing_header = "warn"
-   ```
-
-   Add `--missing-only` to `tears set` so full adoption can tag only files that lack a
-   header, without overwriting existing deliberate `0`, `2`, or `3` tiers.
-
-2. Fix scan target semantics and make empty scans suspicious.
+1. Fix scan target semantics and make empty scans suspicious.
 
    `tears PATH` should find the repo root, load config from that root, build the graph
    from the repo root, and filter results to `PATH`. Today `PATH` is treated as the scan
@@ -39,7 +19,7 @@ durable design rationale belongs in [DESIGN.md](./DESIGN.md).
    If a directory contains Python files and `tears` checks zero files, emit a warning or
    fail with an explanation.
 
-3. Decide and implement consistent `.gitignore` handling.
+2. Decide and implement consistent `.gitignore` handling.
 
    Today the scanner partially respects gitignore during top-level package discovery,
    while the hook only honors `.tears.toml` `exclude`. Decide the policy explicitly,
@@ -47,38 +27,38 @@ durable design rationale belongs in [DESIGN.md](./DESIGN.md).
    gitignored files, hook does not mutate gitignored files, and `exclude` remains for
    tracked files that are intentionally outside tears enforcement.
 
-4. Add an AST/file-walking builder.
+3. Add an AST/file-walking builder.
 
    The current grimp builder is useful for importable Python packages but misses flat
    scripts and namespace packages. A fallback builder should cover ordinary Python files
    and reduce dependency on package layout.
 
-5. Promote this repo's own tiers after review.
+4. Promote this repo's own tiers after review.
 
    As development chores, review and lower tears on tests first, then implementation
    files. Test fixtures use `.notears` markers for now to record their reviewedness
    without normalizing deliberate fixture headers.
 
-6. Define scope semantics in the design.
+5. Define scope semantics in the design.
 
    Document repo root discovery, config root, scan target filtering, file inclusion,
    excluded files, gitignored files, unsupported files, and empty-scan behavior in one
    place before scan behavior is broadened.
 
-7. Decide and enforce excluded-import semantics.
+6. Decide and enforce excluded-import semantics.
 
    Excluded files currently disappear from the graph, so trusted in-scope code can import
    excluded repo code without warning. Decide whether that should warn, fail, or be
    explicitly allowed by configuration, then expose enough graph information for the
    checker to report it.
 
-8. Make mutation commands respect effective defaults.
+7. Make mutation commands respect effective defaults.
 
    `tears down`, `up`, and `set` should make direction and current-tier decisions using
    the same effective tier semantics as scan, including `default_tear` and
    `default_tears`.
 
-9. Make mutation commands consistently safe for non-text files.
+8. Make mutation commands consistently safe for non-text files.
 
    `init`, `up`, `down`, `set`, and hooks should share predictable binary and non-UTF-8
    skip behavior instead of failing differently depending on the command path.
@@ -128,8 +108,8 @@ durable design rationale belongs in [DESIGN.md](./DESIGN.md).
 
 9. Align Makefile targets and docs.
 
-   `make lint`, `make fmt`, README, and agent instructions should agree on which
-   commands check only and which commands mutate formatting or apply fixes.
+   `make lint`, README, and agent instructions should agree on which commands check only
+   and which commands mutate formatting or apply fixes.
 
 10. Add `promote` and `demote` aliases.
 

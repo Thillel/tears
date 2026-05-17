@@ -14,11 +14,6 @@ import pytest
 from tears.cli import main as cli_main
 
 
-class _FakeTTY:
-    def isatty(self) -> bool:
-        return True
-
-
 def _make_repo(tmp_path: Path, *, pkg_content: str = "", toml: str = "") -> Path:
     pkg = tmp_path / "src" / "pkg"
     pkg.mkdir(parents=True)
@@ -127,6 +122,25 @@ def test_up_dir_skips_files_where_number_would_go_down(tmp_path: Path) -> None:
     assert (sub / "lower.py").read_text() == "# @tear: 2\ny = 2\n"  # updated
 
 
+def test_up_missing_only_skips_file_with_existing_header(tmp_path: Path) -> None:
+    f = tmp_path / "x.py"
+    f.write_text("# @tear: 1\nimport os\n")
+    assert cli_main(["up", str(f), "--tear", "3", "--missing-only"]) == 0
+    assert f.read_text() == "# @tear: 1\nimport os\n"
+
+
+def test_up_missing_only_dir_preserves_existing_tiers(tmp_path: Path) -> None:
+    sub = tmp_path / "src"
+    sub.mkdir()
+    (sub / "reviewed.py").write_text("# @tear: 0\nx = 1\n")
+    (sub / "eyeballed.py").write_text("# @tear: 2\ny = 2\n")
+    (sub / "missing.py").write_text("z = 3\n")
+    assert cli_main(["up", str(sub), "--tear", "3", "--missing-only"]) == 0
+    assert (sub / "reviewed.py").read_text() == "# @tear: 0\nx = 1\n"
+    assert (sub / "eyeballed.py").read_text() == "# @tear: 2\ny = 2\n"
+    assert (sub / "missing.py").read_text() == "# @tear: 3\nz = 3\n"
+
+
 # --- tears down ---
 
 
@@ -196,21 +210,57 @@ def test_down_dir_skips_files_already_lower(tmp_path: Path) -> None:
     assert (sub / "draft.py").read_text() == "# @tear: 1\ny = 2\n"
 
 
+def test_down_missing_only_skips_file_with_existing_header(tmp_path: Path) -> None:
+    f = tmp_path / "x.py"
+    f.write_text("# @tear: 3\nimport os\n")
+    assert cli_main(["down", str(f), "--tear", "1", "--missing-only"]) == 0
+    assert f.read_text() == "# @tear: 3\nimport os\n"
+
+
+def test_down_missing_only_dir_preserves_existing_tiers(tmp_path: Path) -> None:
+    sub = tmp_path / "src"
+    sub.mkdir()
+    (sub / "reviewed.py").write_text("# @tear: 0\nx = 1\n")
+    (sub / "eyeballed.py").write_text("# @tear: 2\ny = 2\n")
+    (sub / "missing.py").write_text("z = 3\n")
+    assert cli_main(["down", str(sub), "--tear", "1", "--missing-only"]) == 0
+    assert (sub / "reviewed.py").read_text() == "# @tear: 0\nx = 1\n"
+    assert (sub / "eyeballed.py").read_text() == "# @tear: 2\ny = 2\n"
+    assert (sub / "missing.py").read_text() == "# @tear: 1\nz = 3\n"
+
+
 # --- tears init ---
 
 
-def test_init_creates_config_and_tags_files(
+def test_init_creates_config_without_tagging_files(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     (tmp_path / "a.py").write_text("import os\n")
     (tmp_path / "b.py").write_text("# @tear: 1\nx = 1\n")
     assert cli_main(["init", str(tmp_path)]) == 0
-    assert (tmp_path / ".tears.toml").exists()
-    assert (tmp_path / "a.py").read_text() == "# @tear: 3\nimport os\n"
+    assert (tmp_path / ".tears.toml").read_text() == (
+        "# @tear: 3\n"
+        "max_tear = 3\n"
+        "\n"
+        "# Soft trial mode: existing files without @tear headers are treated as reviewed.\n"
+        "# Full adoption:\n"
+        "#   1. Run: tears set . --tear 1 --missing-only\n"
+        '#   2. Change default_tear to 3, or remove it and set missing_header = "error".\n'
+        "default_tear = 1\n"
+        'missing_header = "warn"\n'
+        "\n"
+        "# Tell tears where your importable Python packages live.\n"
+        "# [imports]\n"
+        '# source_roots = ["src"]\n'
+        "\n"
+        "# Require sensitive directories to stay at stricter tiers.\n"
+        "# [directory_requirements]\n"
+        '# "src/auth" = 0\n'
+        '# "src/api" = 1\n'
+    )
+    assert (tmp_path / "a.py").read_text() == "import os\n"
     assert (tmp_path / "b.py").read_text() == "# @tear: 1\nx = 1\n"  # untouched
-    out = capsys.readouterr().out
-    assert "created" in out
-    assert "tagged 1 file at tear 3" in out
+    assert "created" in capsys.readouterr().out
 
 
 def test_init_skips_existing_config(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
@@ -219,15 +269,14 @@ def test_init_skips_existing_config(tmp_path: Path, capsys: pytest.CaptureFixtur
     assert "already exists" in capsys.readouterr().out
 
 
-def test_init_walks_subdirectories(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+def test_init_does_not_walk_or_tag_subdirectories(tmp_path: Path) -> None:
     sub = tmp_path / "src" / "pkg"
     sub.mkdir(parents=True)
     (sub / "core.py").write_text("import os\n")
     (sub / "util.py").write_text("import os\n")
     assert cli_main(["init", str(tmp_path)]) == 0
-    assert (sub / "core.py").read_text() == "# @tear: 3\nimport os\n"
-    assert (sub / "util.py").read_text() == "# @tear: 3\nimport os\n"
-    assert "tagged 2 files at tear 3" in capsys.readouterr().out
+    assert (sub / "core.py").read_text() == "import os\n"
+    assert (sub / "util.py").read_text() == "import os\n"
 
 
 def test_init_default_path_is_cwd(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -237,53 +286,9 @@ def test_init_default_path_is_cwd(tmp_path: Path, monkeypatch: pytest.MonkeyPatc
     assert (tmp_path / ".tears.toml").exists()
 
 
-def test_init_custom_tear_tags_at_specified_level(tmp_path: Path) -> None:
-    (tmp_path / "a.py").write_text("import os\n")
-    assert cli_main(["init", str(tmp_path), "--tear", "1"]) == 0
-    assert (tmp_path / "a.py").read_text() == "# @tear: 1\nimport os\n"
-
-
-def test_init_custom_tear_skips_existing_headers(tmp_path: Path) -> None:
-    (tmp_path / "a.py").write_text("import os\n")
-    (tmp_path / "b.py").write_text("# @tear: 2\nx = 1\n")
-    assert cli_main(["init", str(tmp_path), "--tear", "1"]) == 0
-    assert (tmp_path / "a.py").read_text() == "# @tear: 1\nimport os\n"
-    assert (tmp_path / "b.py").read_text() == "# @tear: 2\nx = 1\n"  # untouched
-
-
-def test_init_tear_exceeding_max_tear_exits_2(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str]
-) -> None:
-    assert cli_main(["init", str(tmp_path), "--tear", "99"]) == 2
-    assert "out of range" in capsys.readouterr().err
-
-
-def test_init_interactive_uses_prompted_level(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    (tmp_path / "x.py").write_text("import os\n")
-
-    def _input(prompt: str) -> str:
-        return "2"
-
-    monkeypatch.setattr("builtins.input", _input)
-    monkeypatch.setattr("sys.stdin", _FakeTTY())
-    assert cli_main(["init", str(tmp_path)]) == 0
-    assert (tmp_path / "x.py").read_text() == "# @tear: 2\nimport os\n"
-
-
-def test_init_interactive_empty_input_defaults_to_1(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    (tmp_path / "x.py").write_text("import os\n")
-
-    def _input(prompt: str) -> str:
-        return ""
-
-    monkeypatch.setattr("builtins.input", _input)
-    monkeypatch.setattr("sys.stdin", _FakeTTY())
-    assert cli_main(["init", str(tmp_path)]) == 0
-    assert (tmp_path / "x.py").read_text() == "# @tear: 1\nimport os\n"
+def test_init_rejects_old_tear_option(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    assert cli_main(["init", str(tmp_path), "--tear", "1"]) == 2
+    assert "unrecognized arguments" in capsys.readouterr().err
 
 
 # --- tears set ---
@@ -350,3 +355,29 @@ def test_set_dir_no_direction_constraint(tmp_path: Path) -> None:
     assert (sub / "low.py").read_text() == "# @tear: 2\nx = 1\n"
     assert (sub / "high.py").read_text() == "# @tear: 2\ny = 2\n"
     assert (sub / "missing.py").read_text() == "# @tear: 2\nz = 3\n"
+
+
+def test_set_missing_only_tags_headerless_file(tmp_path: Path) -> None:
+    f = tmp_path / "x.py"
+    f.write_text("import os\n")
+    assert cli_main(["set", str(f), "--tear", "1", "--missing-only"]) == 0
+    assert f.read_text() == "# @tear: 1\nimport os\n"
+
+
+def test_set_missing_only_skips_file_with_existing_header(tmp_path: Path) -> None:
+    f = tmp_path / "x.py"
+    f.write_text("# @tear: 3\nimport os\n")
+    assert cli_main(["set", str(f), "--tear", "1", "--missing-only"]) == 0
+    assert f.read_text() == "# @tear: 3\nimport os\n"
+
+
+def test_set_missing_only_dir_preserves_existing_tiers(tmp_path: Path) -> None:
+    sub = tmp_path / "src"
+    sub.mkdir()
+    (sub / "reviewed.py").write_text("# @tear: 0\nx = 1\n")
+    (sub / "eyeballed.py").write_text("# @tear: 2\ny = 2\n")
+    (sub / "missing.py").write_text("z = 3\n")
+    assert cli_main(["set", str(sub), "--tear", "1", "--missing-only"]) == 0
+    assert (sub / "reviewed.py").read_text() == "# @tear: 0\nx = 1\n"
+    assert (sub / "eyeballed.py").read_text() == "# @tear: 2\ny = 2\n"
+    assert (sub / "missing.py").read_text() == "# @tear: 1\nz = 3\n"
