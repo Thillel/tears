@@ -48,7 +48,7 @@ Run `make check` before considering work done.
 ## Testing
 
 - **Unit tests:** `tests/unit/` — fast, in-memory (no filesystem for checker tests — uses `FakeGraph`).
-- **Integration tests:** `tests/scan/` — parametrized over fixture directories in `tests/scan/fixtures/`. Each fixture has a `tears.toml`, source files, and `expected.txt` (snapshot of stdout+exit code). Update snapshots with `make update-snapshots` and review diffs carefully. Fixtures may contain `.notears` files — human-readable markers, not yet enforced. See `audit.md` §4 for the `.notears` roadmap.
+- **Integration tests:** `tests/scan/` — parametrized over fixture directories in `tests/scan/fixtures/`. Each fixture has a `.tears.toml`, source files, and `expected.txt` (snapshot of stdout+exit code). Update snapshots with `make update-snapshots` and review diffs carefully. Fixtures may contain `.notears` files — human-readable markers, not yet enforced. See `roadmap.md` for the `.notears` / fixture reviewedness work.
 
 ## Architecture
 
@@ -74,7 +74,7 @@ tears [path] → cli.main() → run_scan() → load_config() → build ImportGra
 
 **Claude Code** (`.claude/settings.json`): runs `uv run python -m tears.hook` via stdin after every Edit/Write/MultiEdit.
 
-**OpenCode** (`.opencode/plugins/tears-hook.ts`): runs `uv run python -m tears.hook FILE` via `tool.execute.after` for `edit`, `write`, and `apply_patch`.
+**OpenCode** (`.opencode/plugins/tears-hook.js`): runs `uv run python -m tears.hook FILE` via `tool.execute.after` for `edit`, `write`, and `apply_patch`.
 
 Both rewrite any `@tear: N` header to `@tear: 3` (or insert one if missing, for ~50 known file types). Agents should never bypass, only humans should be shedding tears.
 
@@ -82,7 +82,7 @@ Both rewrite any `@tear: N` header to `@tear: 3` (or insert one if missing, for 
 
 ```sh
 tears [path]                          # scan a directory (default .)
-tears init [path]                     # scaffold .tears.toml, tag all headerless files
+tears init [path]                     # current: scaffold .tears.toml, tag headerless files
 tears down FILE/DIR --tear N          # promote: mark as more trusted (number goes down)
 tears up FILE/DIR --tear N            # demote: mark as less trusted (number goes up)
 tears set FILE/DIR --tear N           # set exact level, no direction check
@@ -92,4 +92,4 @@ uv run python -m tears.hook [FILE …]  # manual hook invocation
 
 ## Reference
 
-See `spec.md` §5 for the broader rationale, `plan.md` §3 for the hook design.
+See `README.md` for current behavior, `DESIGN.md` for broader rationale, and `roadmap.md` for planned work.

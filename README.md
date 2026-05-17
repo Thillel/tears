@@ -3,47 +3,104 @@
 # Tears
 
 **Tiered Enforcement, Authorship Review System.**
+
 *Vibe-Code Responsibly*
 
-`tears` is a small linter for repos where humans and AI tools both write code.
-Every source file declares its review level via a `@tear` header (0 = deeply
-reviewed, 3 = unreviewed AI output). A Claude Code hook mechanically demotes any
-file it edits to tier 3. The diff makes the demotion visible — if you didn't
-notice the tier dropped in your PR, you didn't review the code. `tears` then
-enforces import rules and directory-level requirements based on those headers.
+`tears` lets teams use AI coding tools without losing track of what has actually
+been reviewed.
 
-```python
-# @tear: 0
-import hashlib
+AI edits demote files to `@tear: 3`. Humans promote them after review. CI enforces
+that higher-trust Python code cannot import lower-trust Python code.
 
-def verify(token: str) -> str:
-    return hashlib.sha256(token.encode()).hexdigest()
+The useful mechanic is the diff:
+
+```diff
+- # @tear: 1
++ # @tear: 3
 ```
 
-## The mechanic
+The diff is the attestation. If the tier dropped and nobody restored it, the file is
+still unreviewed.
 
-1. Every file has a `# @tear: N` header on one of its first 5 lines.
-2. A Claude Code `PostToolUse` hook overwrites the value to `max_tear` (default 3)
-   on every edit, *or* inserts the header if missing.
-3. To restore a higher tier, a human edits the header back. The diff is the
-   attestation: "I reviewed this."
-4. `tears` checks every file's directory requirement and every import edge — a
-   file may only import from files at its own tier or better.
+## Why
 
-## Status
+AI-assisted teams need a cheap way to answer:
 
-Early. Currently supports only Python. Released to PyPI.
-See [`plan.md`](./plan.md) for the scope and roadmap, [`spec.md`](./spec.md) for the broader vision.
+- Which files were touched by AI?
+- Which files have actually been reviewed?
+- Can sensitive code accidentally depend on unreviewed code?
+
+`tears` keeps that signal in source control, where reviewers already look.
+
+## Installation
+
+```bash
+pip install tears-cli
+```
+
+or:
+
+```bash
+uv add --dev tears-cli
+```
+
+## Quick Start
+
+Create `.tears.toml`:
+
+```toml
+# @tear: 3
+# Soft trial mode: existing files without @tear headers are treated as reviewed.
+default_tear = 1
+missing_header = "warn"
+
+[directory_requirements]
+"src/auth" = 0
+"src/api" = 1
+
+[imports]
+source_roots = ["src"]
+```
+
+Run a full scan:
+
+```bash
+tears
+```
+
+Add the AI edit hook, pre-commit hook, or GitHub Action below when you are ready to
+enforce it automatically.
+
+## Adoption Modes
+
+Soft trial mode uses `default_tear = 1`, so existing headerless files can be treated as
+reviewed without rewriting the repo.
+
+Full adoption will use a missing-only tagging flow once implemented:
+
+```bash
+tears set . --tear 1 --missing-only
+```
+
+Then change `default_tear` to `3`, or remove it and set:
+
+```toml
+missing_header = "error"
+```
+
+Current note: `tears init` still tags existing files. Before stable release, init will
+become a low-churn config-only command that writes `default_tear = 1` instead. Until
+then, create `.tears.toml` directly if you want to try `tears` without rewriting source
+files.
 
 ## Hooks
 
-`tears` ships an auto-demotion hook that rewrites `@tear: N` to `@tear: 3` (or
-inserts the header if missing) after every AI tool edit. This is the enforcement
-backstop — a human must consciously re-promote the tier.
+Hooks demote files after AI tool edits. They mutate headers; they do not run the scanner.
+They require `uv run python -m tears.hook` to work from the repo where the edit happens.
 
 ### Claude Code
 
-Copy the `hooks` block into your `.claude/settings.json`:
+Add this to `.claude/settings.json`:
 
 ```json
 {
@@ -63,43 +120,135 @@ Copy the `hooks` block into your `.claude/settings.json`:
 }
 ```
 
-The hook reads `{"tool_input": {"file_path": "..."}}` from stdin. See
-[`src/tears/hook.py`](./src/tears/hook.py) for details.
-In the future this can become a plugin.
+The hook reads the edited file path from Claude Code's stdin JSON payload. It runs after
+`Edit`, `Write`, and `MultiEdit` tool calls. Manual editor changes are not demoted.
 
 ### OpenCode
 
-Place `.opencode/plugins/tears-hook.ts` in the repo root (already done in this
-repo). OpenCode auto-loads plugins from this directory — no config needed. The
-plugin intercepts `edit`, `write`, and `apply_patch` tool calls and passes the
-affected file paths to `tears.hook` via CLI args.
+This repo includes an OpenCode plugin at `.opencode/plugins/tears-hook.js`. Place that
+file in the same path in another repo to enable the hook there.
 
-Manual editor changes are untouched by both hooks — only AI tool calls trigger
-the demotion.
-
-## Installation
+The plugin listens for `edit`, `write`, and `apply_patch` tool calls and passes edited
+file paths to:
 
 ```bash
-pip install tears-cli
-# or with uv
-uv add --dev tears-cli
+uv run python -m tears.hook FILE
 ```
 
-## Quick start
+Current OpenCode plugin limitations:
+
+- it is repo-local rather than a packaged installer;
+- it currently handles one path from an `apply_patch`;
+- it still needs cleanup before being treated as polished integration code.
+
+## Pre-commit and CI
+
+### Pre-commit
+
+Add this to `.pre-commit-config.yaml`:
+
+```yaml
+repos:
+  - repo: https://github.com/Thillel/tears
+    rev: v0.1.0
+    hooks:
+      - id: tears
+```
+
+The published hook intentionally ignores filenames and runs a full repo scan. This matches
+the current scanner model.
+
+### GitHub Actions
+
+Use the bundled action in a workflow:
+
+```yaml
+name: tears
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  tears:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Thillel/tears/.github/actions@v0.1.0
+        with:
+          path: .
+```
+
+The GitHub Action accepts a `path` input, but with the current scanner that path should
+be the repo root.
+
+## Tear Levels
+
+| Tear | Meaning |
+| --- | --- |
+| `0` | Deeply reviewed. Security-critical or domain-owner reviewed. |
+| `1` | Reviewed by a human, line by line. |
+| `2` | Eyeballed for exfiltration, network calls, and obvious security issues. |
+| `3` | Unreviewed. AI-generated or AI-touched. |
+
+Lower numbers are more trusted.
+
+## Rules
+
+By default, a file may import from files at its own tier or a more trusted tier:
+
+| Importer | May import |
+| --- | --- |
+| `0` | `0` |
+| `1` | `0`, `1` |
+| `2` | `0`, `1`, `2` |
+| `3` | `0`, `1`, `2`, `3` |
+
+Directory requirements can require sensitive paths to stay at a higher trust tier.
+
+## Header Format
+
+Python files use:
+
+```python
+# @tear: 1
+```
+
+Other supported hook insertion styles include:
+
+```js
+// @tear: 1
+```
+
+```md
+<!-- @tear: 1 -->
+```
+
+Only Python files are mechanically scanned in the current release.
+
+## Commands
 
 ```bash
-tears path/to/your/repo              # scan
-tears init path/to/repo              # scaffold .tears.toml + tag all files (prompts for level)
-tears init path/to/repo --tear 1     # scaffold, tag all files at tear 1 (no prompt)
-tears down FILE/DIR --tear 1         # promote: mark as more trusted
-tears up FILE/DIR --tear 3           # demote: mark as less trusted
-tears set FILE/DIR --tear 2          # set exact level, no direction check
+tears                            # scan the repo
+tears down FILE_OR_DIR --tear 1  # promote: more trusted
+tears up FILE_OR_DIR --tear 3    # demote: less trusted
+tears set FILE_OR_DIR --tear 2   # exact level
 ```
 
-Add a `.tears.toml` at the repo root:
+## Configuration
+
+`tears` reads `.tears.toml` from the scan root.
 
 ```toml
-missing_header = "warn"   # or "error"
+# @tear: 3
+max_tear = 3
+missing_header = "warn"
+exclude = ["tests/scan/fixtures/**", "**/*.generated.py"]
+default_tear = 3
+
+[default_tears]
+"tests" = 3
 
 [directory_requirements]
 "src/auth" = 0
@@ -107,7 +256,37 @@ missing_header = "warn"   # or "error"
 
 [imports]
 source_roots = ["src"]
+
+[import_rules]
+"1" = 2
 ```
+
+Config fields:
+
+- `max_tear`: highest tier number. Defaults to `3`.
+- `missing_header`: `warn` or `error`. Defaults to `warn`.
+- `exclude`: glob patterns ignored by scanner and hook.
+- `default_tear`: tier to assume for headerless files without warning.
+- `default_tears`: path-specific defaults for headerless files.
+- `directory_requirements`: path-specific maximum allowed tier.
+- `imports.source_roots`: roots used for Python package discovery.
+- `import_rules`: optional per-tier import relaxation or restriction.
+
+## Current Scope
+
+`tears` is early. Today, it enforces Python package imports only. The hook can insert or
+demote headers in many file types, but the scanner currently checks `.py` files discovered
+through Python package roots.
+
+Current scanner limitations:
+
+- `tears` is a full-repo scan.
+- `tears PATH` currently treats `PATH` as the repo root, not as a subpath filter.
+- Single-file scans such as `tears src/foo.py` are not implemented.
+- Flat scripts and namespace packages may be missed by the current grimp-backed scanner.
+
+See [DESIGN.md](./DESIGN.md) for the design rationale and [roadmap.md](./roadmap.md)
+for planned fixes.
 
 ## Development
 
@@ -115,11 +294,13 @@ source_roots = ["src"]
 git clone https://github.com/Thillel/tears
 cd tears
 uv sync
-make check      # lint + test
-make test       # pytest only
-make fmt        # ruff format + autofix
+make check
+make test
+make fmt
 ```
+
+`make check` runs formatting, linting, strict type checking, and tests.
 
 ## License
 
-MIT. See [`LICENSE`](./LICENSE).
+MIT. See [LICENSE](./LICENSE).
