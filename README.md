@@ -6,11 +6,16 @@
 
 *Vibe-Code Responsibly*
 
-`tears` lets teams use AI coding tools without losing track of what has actually
-been reviewed.
+Not everything in your repo needs the same level of scrutiny. You should be able to
+vibe-code a dashboard, prototype a feature, iterate on a script — without giving each
+one the same ceremony as your auth layer. But they live in the same repo, and right now
+nothing stops a carelessly imported module from pulling unreviewed code into your most
+sensitive systems.
 
-AI edits demote files to `@tear: 3`. Humans promote them after review. CI enforces
-that higher-trust Python code cannot import lower-trust Python code.
+`tears` lets you vibe-code where it's safe and stay careful where it matters. Files
+declare a trust tier via a `@tear` header. AI tools automatically demote files they
+touch. Humans restore the tier after review — or don't.
+CI enforces that trusted code can't depend on untrusted code.
 
 The useful mechanic is the diff:
 
@@ -19,18 +24,31 @@ The useful mechanic is the diff:
 + # @tear: 3
 ```
 
-The diff is the attestation. If the tier dropped and nobody restored it, the file is
-still unreviewed.
+If you saw this in your diff and changed it back, you reviewed the code. If you
+didn't notice, you didn't — and the tier stays where it belongs.
 
 ## Why
 
-AI-assisted teams need a cheap way to answer:
+You want to prototype fast. You want to vibe-code that internal tool, iterate on that
+analytics page, let AI write the first draft of a migration script. You want to ship
+things that are changing quickly — maybe a POC, maybe an eval, maybe a little
+dashboard — without treating every file like it's launch-day production code.
 
-- Which files were touched by AI?
-- Which files have actually been reviewed?
-- Can sensitive code accidentally depend on unreviewed code?
+But you also want to know that your auth logic, your payment flow, your core business
+rules haven't quietly started depending on code that nobody actually read.
 
-`tears` keeps that signal in source control, where reviewers already look.
+`tears` makes both possible at once:
+
+- **Iterate freely on the periphery.** Scripts, tools, dashboards, prototypes — leave
+  them at `@tear: 3` or `@tear: 2`. Vibe-code them, change them daily, they don't need
+  a ceremony.
+- **Stay rigorous at the core.** Auth, payments, security — these stay at `@tear: 0`.
+  The import rule guarantees they can only depend on equally reviewed code.
+- **Know what's what.** The tier lives in the file, in source control, in the diff.
+  No separate tracking system, no stale spreadsheet, no guessing.
+
+The tiers aren't a judgment about code quality. Tier 3 code might be perfectly fine.
+It just hasn't been through the process yet — and until it has, it stays in its lane.
 
 ## Installation
 
