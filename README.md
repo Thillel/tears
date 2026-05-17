@@ -150,11 +150,9 @@ file paths to:
 uv run python -m tears.hook FILE
 ```
 
-Current OpenCode plugin limitations:
+Current OpenCode plugin limitation:
 
-- it is repo-local rather than a packaged installer;
-- it currently handles one path from an `apply_patch`;
-- it still needs cleanup before being treated as polished integration code.
+- it is repo-local rather than a packaged installer.
 
 ## Pre-commit and CI
 

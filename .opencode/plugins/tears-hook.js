@@ -1,28 +1,28 @@
-// @tear: 3
+// @tear: 1
 export const TearsHook = async ({ $, directory, worktree }) => {
   return {
     "tool.execute.after": async (input, output) => {
       const cwd = worktree || directory || "."
-
-      // Debug: write to log when any tool fires
-      await $`echo "[tears] tool=${input.tool} at $(date)" >> /tmp/tears-hook.log`.cwd(cwd)
-
-      let filePath = ""
+      const filePaths = new Set()
 
       if (input.tool === "edit" || input.tool === "write") {
-        filePath = input.args?.filePath || output?.args?.filePath || ""
+        const filePath = input.args?.filePath || output?.args?.filePath || ""
+        if (filePath) filePaths.add(filePath)
       } else if (input.tool === "apply_patch") {
         const text = input.args?.patchText || output?.args?.patchText || ""
-        const m = text.match(/^\*\*\* (?:Add File|Update File): (.+)$/m)
-        if (m) filePath = m[1]
+        const patchPathPattern = /^\*\*\* (?:Add File|Update File|Delete File|Move to): (.+)$/gm
+        for (const match of text.matchAll(patchPathPattern)) {
+          filePaths.add(match[1])
+        }
       }
 
-      if (!filePath) {
-        await $`echo "[tears] no filePath for tool=${input.tool}" >> /tmp/tears-hook.log`.cwd(cwd)
+      if (filePaths.size === 0) {
         return
       }
-      await $`uv run python -m tears.hook ${filePath}`.cwd(cwd)
-      await $`echo "[tears] hook ran for ${filePath}" >> /tmp/tears-hook.log`.cwd(cwd)
+
+      for (const filePath of filePaths) {
+        await $`uv run python -m tears.hook ${filePath}`.cwd(cwd)
+      }
     },
   }
 }

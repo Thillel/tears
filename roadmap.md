@@ -119,30 +119,25 @@ durable design rationale belongs in [DESIGN.md](./DESIGN.md).
    asks on startup whether to enable it. Longer term, document or package the install
    path so users can add the hook without copying internal repo files.
 
-2. Harden the OpenCode plugin.
-
-   Remove debug logging, handle all files in multi-file patches, and pass paths without
-   shell interpolation risk.
-
-3. Improve GitHub Action self-tests.
+2. Improve GitHub Action self-tests.
 
    Test the local action implementation in PRs instead of always testing `@main`.
 
-4. Add GitHub annotation support.
+3. Add GitHub annotation support.
 
    This likely depends on JSON output.
 
-5. Add editor integration.
+4. Add editor integration.
 
    Useful features: gutter tier display, quick demote/promote commands, and inline import
    violation diagnostics.
 
-6. Add CI coverage/scope checks.
+5. Add CI coverage/scope checks.
 
    CI should be able to fail on suspiciously small scan coverage, including accidental
    `0 files checked` runs once scan scope diagnostics exist.
 
-7. Add hook install and doctor commands.
+6. Add hook install and doctor commands.
 
    Provide a reliable installation and verification path for Codex, Claude, and OpenCode
    hooks so users can confirm AI edits are actually being demoted.
