@@ -39,6 +39,11 @@ def main(argv: list[str] | None = None) -> int:
         argv = sys.argv[1:]
 
     paths: list[Path] = [Path(arg) for arg in argv] if argv else _paths_from_stdin()
+    return process_paths(paths)
+
+
+def process_paths(paths: list[Path]) -> int:
+    """Demote @tear headers for concrete paths."""
     if not paths:
         return 0
 

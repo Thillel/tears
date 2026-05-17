@@ -16,7 +16,7 @@ Every text file in this repo carries a `@tear` header, using the file's comment 
 
 Only `.py` is *mechanically* enforced by `tears` in v1. Other file types carry headers for honest dogfooding — the diff signals what was AI-touched, but the linter doesn't check them.
 
-A `PostToolUse` hook (Claude Code) or plugin (OpenCode) adds or demotes headers automatically; no need to do by hand.
+A `PostToolUse` hook (Codex or Claude Code) or plugin (OpenCode) adds or demotes headers automatically; no need to do by hand.
 The diff is the attestation: if a tier dropped in the PR, the reviewer knows
 code was touched and not yet re-reviewed.
 
@@ -68,11 +68,14 @@ tears [path] → cli.main() → run_scan() → load_config() → build ImportGra
 | Header | `header.py` | `parse_tear_level(text) -> int | None` — regex over first 5 lines |
 | Styles | `styles.py` | Comment-style constants and lookup tables for all known file types |
 | Mutate | `mutate.py` | `set_tear()`, `process_file()`, `find_repo_root()` — shared mutation primitives |
-| Hook | `hook.py` | Entry point only — reads stdin/argv, delegates to `mutate.process_file` |
+| Hook | `hook.py` | Shared hook entry point — reads Claude stdin/argv paths, delegates to `mutate.process_file` |
+| Codex hook | `codex_hook.py` | Codex PostToolUse wrapper — extracts `apply_patch` paths, delegates to `hook.process_paths` |
 
 ## PostToolUse hooks
 
 **Claude Code** (`.claude/settings.json`): runs `uv run python -m tears.hook` via stdin after every Edit/Write/MultiEdit.
+
+**Codex** (`.codex/config.toml`): runs `uv run python -m tears.codex_hook` after `apply_patch`. Codex asks on startup whether to enable the hook; enable it to demote files touched by Codex edits.
 
 **OpenCode** (`.opencode/plugins/tears-hook.js`): runs `uv run python -m tears.hook FILE` via `tool.execute.after` for `edit`, `write`, and `apply_patch`.
 
@@ -87,7 +90,8 @@ tears down FILE/DIR --tear N          # promote: mark as more trusted (number go
 tears up FILE/DIR --tear N            # demote: mark as less trusted (number goes up)
 tears set FILE/DIR --tear N           # set exact level, no direction check
 uv run python -m tears                # same as bare `tears`
-uv run python -m tears.hook [FILE …]  # manual hook invocation
+uv run python -m tears.hook [FILE …]         # manual/shared hook invocation
+uv run python -m tears.codex_hook            # Codex stdin wrapper
 ```
 
 ## Reference

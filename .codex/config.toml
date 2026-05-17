@@ -1,0 +1,9 @@
+# @tear: 1
+[[hooks.PostToolUse]]
+matcher = "^apply_patch$"
+
+[[hooks.PostToolUse.hooks]]
+type = "command"
+command = 'cd "$(git rev-parse --show-toplevel)" && uv run python -m tears.codex_hook'
+timeout = 30
+statusMessage = "Demoting @tear headers"

@@ -96,7 +96,8 @@ files.
 ## Hooks
 
 Hooks demote files after AI tool edits. They mutate headers; they do not run the scanner.
-They require `uv run python -m tears.hook` to work from the repo where the edit happens.
+They require `uv run python -m tears.hook` or the tool-specific wrapper to work from the
+repo where the edit happens.
 
 ### Claude Code
 
@@ -123,6 +124,23 @@ Add this to `.claude/settings.json`:
 The hook reads the edited file path from Claude Code's stdin JSON payload. It runs after
 `Edit`, `Write`, and `MultiEdit` tool calls. Manual editor changes are not demoted.
 
+### Codex
+
+This repo includes a Codex hook config at `.codex/config.toml`. Place that file in the
+same path in another repo to enable the hook there.
+
+On startup, Codex will ask whether to enable the hook. Enable it if you want Codex edits
+made through `apply_patch` to demote touched files automatically.
+
+The Codex config runs:
+
+```bash
+uv run python -m tears.codex_hook
+```
+
+The wrapper reads Codex's PostToolUse stdin payload, extracts file paths from the patch,
+and delegates header mutation to the shared hook logic.
+
 ### OpenCode
 
 This repo includes an OpenCode plugin at `.opencode/plugins/tears-hook.js`. Place that
@@ -140,6 +158,12 @@ Current OpenCode plugin limitations:
 - it is repo-local rather than a packaged installer;
 - it currently handles one path from an `apply_patch`;
 - it still needs cleanup before being treated as polished integration code.
+
+Current Codex hook limitations:
+
+- it is repo-local rather than a packaged installer;
+- it currently handles `apply_patch` edits only;
+- Codex prompts to enable the hook on startup, so a user must opt in before it runs.
 
 ## Pre-commit and CI
 

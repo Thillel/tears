@@ -48,7 +48,8 @@ The current module layout is deliberately small:
 | `header.py` | Python `@tear` header parsing |
 | `styles.py` | comment styles for hook insertion |
 | `mutate.py` | shared header mutation primitives |
-| `hook.py` | AI-tool hook entry point |
+| `hook.py` | shared AI-tool hook entry point |
+| `codex_hook.py` | Codex PostToolUse wrapper for `apply_patch` payloads |
 | `rules.py` | pure tier and directory rule functions |
 | `checker.py` | composes rules over an import graph |
 | `scan.py` | scan orchestration and text reporting |
@@ -79,7 +80,7 @@ layout. Flat scripts and namespace packages are a known gap.
 The hook path is separate from the scan path. Hooks do not validate imports. They only
 set or insert `@tear` headers.
 
-Hook behavior:
+Shared hook behavior:
 
 1. Find the repo root.
 2. Load `.tears.toml`, falling back to defaults on config errors.
@@ -89,6 +90,14 @@ Hook behavior:
 
 The hook is intentionally tolerant. AI edit hooks should not break normal editing because
 of a malformed config file.
+
+Tool integrations are thin adapters around that shared mutation path:
+
+- Claude Code runs `tears.hook` from a PostToolUse hook and passes the edited path in
+  stdin JSON.
+- Codex uses `.codex/config.toml` to run `tears.codex_hook` after `apply_patch`. Codex
+  asks on startup whether to enable the hook before it runs.
+- OpenCode uses `.opencode/plugins/tears-hook.js` to pass edited paths to `tears.hook`.
 
 ## Configuration
 

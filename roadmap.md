@@ -93,20 +93,26 @@ durable design rationale belongs in [DESIGN.md](./DESIGN.md).
 
 ## Hooks and Integrations
 
-1. Harden the OpenCode plugin.
+1. Package the Codex hook for reuse.
+
+   The committed `.codex/config.toml` gives this repo a working Codex hook, and Codex
+   asks on startup whether to enable it. Longer term, document or package the install
+   path so users can add the hook without copying internal repo files.
+
+2. Harden the OpenCode plugin.
 
    Remove debug logging, handle all files in multi-file patches, and pass paths without
    shell interpolation risk.
 
-2. Improve GitHub Action self-tests.
+3. Improve GitHub Action self-tests.
 
    Test the local action implementation in PRs instead of always testing `@main`.
 
-3. Add GitHub annotation support.
+4. Add GitHub annotation support.
 
    This likely depends on JSON output.
 
-4. Add editor integration.
+5. Add editor integration.
 
    Useful features: gutter tier display, quick demote/promote commands, and inline import
    violation diagnostics.
