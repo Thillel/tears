@@ -10,7 +10,7 @@ lint:
 test:
 	uv run pytest
 
-# Regenerate `expected.txt` for every fixture under tests/scan/fixtures/.
+# Regenerate `expected.txt` for every fixture under tests/scan/fixtures/*/.
 # Run after adding a fixture or changing scan/checker output. Review the
 # resulting diffs carefully — this is the only way the test suite knows
 # what the right answer is.

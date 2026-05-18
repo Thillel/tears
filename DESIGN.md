@@ -133,6 +133,11 @@ The test suite has two layers:
 - Integration tests run complete fixture repos and compare stdout plus exit code against
   snapshots.
 
+Integration fixtures are grouped by language or suite under
+`tests/scan/fixtures/<suite>/<fixture>/`. Each fixture directory is a complete mini-repo
+with its own config, source files, and expected output. Future-behavior fixtures use
+strict xfail markers so they fail as XPASS once implementation catches up.
+
 The checker is tested against an in-memory fake graph. This keeps rule tests independent
 from grimp and filesystem behavior.
 
@@ -157,6 +162,10 @@ and they deliberately contain missing headers, invalid configurations, xfailed f
 expectations, and unusual tear values. Excluding those fixture trees from both scan and
 header marking is part of the test design, not an escape hatch from dogfooding. The
 snapshot diff is the review surface for fixture behavior.
+
+The current fixture suites include Python fixtures for implemented behavior and
+TypeScript fixtures for desired future behavior. The TypeScript fixtures document import
+forms the future scanner should resolve; they do not imply current TypeScript support.
 
 `.notears` files in fixture trees are human-readable markers. They document that a tree
 is intentionally outside normal repo reviewedness policy, but `tears` does not enforce
@@ -230,3 +239,6 @@ straightforward.
 
 Multi-language support should wait until Python scan semantics are precise. Each new
 language needs real import resolution, not just header parsing.
+The TypeScript xfailed fixtures record first-pass resolver expectations: relative
+imports, side-effect imports, export-from dependencies, `index.ts` resolution, and
+`import type` as a trust dependency.

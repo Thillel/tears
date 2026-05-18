@@ -341,8 +341,9 @@ and tests.
 
 Real test code dogfoods `tears`; this repo uses `[artificial_tears]` where tests need
 to import lower-trust implementation files. Scan fixtures under
-`tests/scan/fixtures/**` are linter input data, so they are excluded and may contain
-deliberate missing headers, unusual tear values, and future expectations.
+`tests/scan/fixtures/<suite>/<fixture>/` are linter input data, so they are excluded
+and may contain deliberate missing headers, unusual tear values, and future expectations.
+Some future scanner expectations are recorded as strict-xfailed fixtures.
 
 ## License
 
