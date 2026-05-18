@@ -305,6 +305,14 @@ def test_init_creates_config_without_tagging_files(
         "# [directory_requirements]\n"
         '# "src/auth" = 0\n'
         '# "src/api" = 1\n'
+        "\n"
+        "# Configure scan-only exclusions.\n"
+        "# [scan]\n"
+        '# exclude = ["fixtures/**"]\n'
+        "\n"
+        "# Skip automatic @tear header marking for hooks and set/up/down commands.\n"
+        "# [mutate]\n"
+        '# exclude = ["vendor/**"]\n'
     )
     assert (tmp_path / "a.py").read_text() == "import os\n"
     assert (tmp_path / "b.py").read_text() == "# @tear: 1\nx = 1\n"  # untouched
@@ -429,3 +437,27 @@ def test_set_missing_only_dir_preserves_existing_tiers(tmp_path: Path) -> None:
     assert (sub / "reviewed.py").read_text() == "# @tear: 0\nx = 1\n"
     assert (sub / "eyeballed.py").read_text() == "# @tear: 2\ny = 2\n"
     assert (sub / "missing.py").read_text() == "# @tear: 1\nz = 3\n"
+
+
+def test_set_dir_respects_mutate_exclude(tmp_path: Path) -> None:
+    (tmp_path / ".tears.toml").write_text('[mutate]\nexclude = ["src/generated.py"]\n')
+    sub = tmp_path / "src"
+    sub.mkdir()
+    (sub / "generated.py").write_text("x = 1\n")
+    (sub / "normal.py").write_text("y = 2\n")
+
+    assert cli_main(["set", str(sub), "--tear", "1"]) == 0
+
+    assert (sub / "generated.py").read_text() == "x = 1\n"
+    assert (sub / "normal.py").read_text() == "# @tear: 1\ny = 2\n"
+
+
+def test_set_dir_ignores_scan_exclude(tmp_path: Path) -> None:
+    (tmp_path / ".tears.toml").write_text('[scan]\nexclude = ["src/generated.py"]\n')
+    sub = tmp_path / "src"
+    sub.mkdir()
+    (sub / "generated.py").write_text("x = 1\n")
+
+    assert cli_main(["set", str(sub), "--tear", "1"]) == 0
+
+    assert (sub / "generated.py").read_text() == "# @tear: 1\nx = 1\n"

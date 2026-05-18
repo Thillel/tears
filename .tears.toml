@@ -1,9 +1,15 @@
-# @tear: 2
+# @tear: 1
 # Repo's own tears config. Excludes the snapshot-test fixtures so neither
 # `tears` nor the Claude hook treats their intentional tier headers as real
 # attestations.
-
-exclude = ["tests/scan/fixtures/**"]
+# Unit tests are scan-excluded for now, but not hook-excluded, so edits there
+# still get demoted and reviewed through the normal header workflow.
 
 [imports]
 source_roots = ["src"]
+
+[scan]
+exclude = ["tests/scan/fixtures/**", "tests/unit/**"]
+
+[mutate]
+exclude = ["tests/scan/fixtures/**"]

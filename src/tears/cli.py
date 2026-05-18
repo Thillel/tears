@@ -36,6 +36,14 @@ missing_header = "warn"
 # [directory_requirements]
 # "src/auth" = 0
 # "src/api" = 1
+
+# Configure scan-only exclusions.
+# [scan]
+# exclude = ["fixtures/**"]
+
+# Skip automatic @tear header marking for hooks and set/up/down commands.
+# [mutate]
+# exclude = ["vendor/**"]
 """
 
 
@@ -195,7 +203,9 @@ def _apply_up_file(
             )
             return 1
         return 0  # silently skip in bulk mode
-    changed = process_file(path, tear=target, exclude=config.exclude, repo_root=repo_root)
+    changed = process_file(
+        path, tear=target, exclude=config.excludes_for_mutation(), repo_root=repo_root
+    )
     if changed:
         prev = str(current.explicit) if current.explicit is not None else "∅"
         print(f"{path.name}  {prev} → {target}")
@@ -258,7 +268,9 @@ def _apply_down_file(
             )
             return 1
         return 0  # silently skip in bulk mode
-    changed = process_file(path, tear=target, exclude=config.exclude, repo_root=repo_root)
+    changed = process_file(
+        path, tear=target, exclude=config.excludes_for_mutation(), repo_root=repo_root
+    )
     if changed:
         prev = str(current.explicit) if current.explicit is not None else "∅"
         print(f"{path.name}  {prev} → {target}")
@@ -326,7 +338,9 @@ def _apply_set_file(
     current = _current_tier(path, content, config, repo_root)
     if missing_only and current.explicit is not None:
         return 0
-    changed = process_file(path, tear=target, exclude=config.exclude, repo_root=repo_root)
+    changed = process_file(
+        path, tear=target, exclude=config.excludes_for_mutation(), repo_root=repo_root
+    )
     if changed:
         prev = str(current.explicit) if current.explicit is not None else "∅"
         print(f"{path.name}  {prev} → {target}")
@@ -340,7 +354,7 @@ def _walk(root: Path, config: TearsConfig, repo_root: Path) -> list[Path]:
             continue
         if ".git" in file_path.parts or "__pycache__" in file_path.parts:
             continue
-        if is_excluded(file_path, repo_root, config.exclude):
+        if is_excluded(file_path, repo_root, config.excludes_for_mutation()):
             continue
         results.append(file_path)
     return results

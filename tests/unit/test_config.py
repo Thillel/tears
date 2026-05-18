@@ -30,6 +30,12 @@ def test_load_toml(tmp_path: Path) -> None:
         'exclude = ["**/*.generated.py"]\n'
         'missing_header = "error"\n'
         "\n"
+        "[scan]\n"
+        'exclude = ["scan-only/**"]\n'
+        "\n"
+        "[mutate]\n"
+        'exclude = ["mutate-only/**"]\n'
+        "\n"
         "[directory_requirements]\n"
         '"src/auth" = 0\n'
         '"src/api" = 2\n'
@@ -44,6 +50,10 @@ def test_load_toml(tmp_path: Path) -> None:
     assert cfg.max_tear == 5
     assert cfg.directory_requirements == {"src/auth": 0, "src/api": 2}
     assert cfg.exclude == ["**/*.generated.py"]
+    assert cfg.scan_exclude == ["scan-only/**"]
+    assert cfg.mutate_exclude == ["mutate-only/**"]
+    assert cfg.excludes_for_scan() == ["**/*.generated.py", "scan-only/**"]
+    assert cfg.excludes_for_mutation() == ["**/*.generated.py", "mutate-only/**"]
     assert cfg.source_roots == ["src"]
     assert cfg.import_rules == {1: 2}
     assert cfg.missing_header == "error"
@@ -108,4 +118,11 @@ def test_import_rules_non_integer_key_rejected(tmp_path: Path) -> None:
     """TOML keys are strings; we require integer-valued strings for `import_rules`."""
     (tmp_path / ".tears.toml").write_text('[import_rules]\n"not_an_int" = 0\n')
     with pytest.raises(ConfigError, match="import_rules keys must be integer-valued"):
+        load_config(tmp_path)
+
+
+def test_consumer_specific_excludes_must_be_string_lists(tmp_path: Path) -> None:
+    (tmp_path / ".tears.toml").write_text("[scan]\nexclude = [1]\n")
+
+    with pytest.raises(ConfigError, match=r"scan\.exclude entries must be strings"):
         load_config(tmp_path)

@@ -115,6 +115,8 @@ Important config choices:
 - `missing_header` lets teams start with warnings and later tighten to errors.
 - `default_tear` and `default_tears` let teams try the tool without editing every file.
 - `exclude` is shared by scanner and hook.
+- `scan.exclude` and `mutate.exclude` add consumer-specific exclusions without changing
+  the shared `exclude` behavior.
 - `import_rules` can relax or restrict the default import matrix.
 
 ## Testing Strategy

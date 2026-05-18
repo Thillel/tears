@@ -51,3 +51,33 @@ def test_main_with_broken_config_falls_back_to_defaults(
     monkeypatch.chdir(tmp_path)
     assert main([str(target)]) == 0
     assert target.read_text() == "# @tear: 3\nimport os\n"
+
+
+def test_main_respects_mutate_exclude(tmp_path: Path) -> None:
+    (tmp_path / ".tears.toml").write_text('[mutate]\nexclude = ["generated/**"]\n')
+    target = tmp_path / "generated" / "x.py"
+    target.parent.mkdir()
+    target.write_text("import os\n")
+
+    assert main([str(target)]) == 0
+    assert target.read_text() == "import os\n"
+
+
+def test_main_respects_global_exclude(tmp_path: Path) -> None:
+    (tmp_path / ".tears.toml").write_text('exclude = ["generated/**"]\n')
+    target = tmp_path / "generated" / "x.py"
+    target.parent.mkdir()
+    target.write_text("import os\n")
+
+    assert main([str(target)]) == 0
+    assert target.read_text() == "import os\n"
+
+
+def test_main_ignores_scan_exclude(tmp_path: Path) -> None:
+    (tmp_path / ".tears.toml").write_text('[scan]\nexclude = ["generated/**"]\n')
+    target = tmp_path / "generated" / "x.py"
+    target.parent.mkdir()
+    target.write_text("import os\n")
+
+    assert main([str(target)]) == 0
+    assert target.read_text() == "# @tear: 3\nimport os\n"

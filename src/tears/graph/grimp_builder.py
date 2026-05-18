@@ -92,7 +92,7 @@ def build_grimp_graph(repo_root: Path, config: TearsConfig) -> GrimpImportGraph:
 
     files: dict[Path, int | None] = {}
     for file_path in module_to_file.values():
-        if is_excluded(file_path, repo_root, config.exclude):
+        if is_excluded(file_path, repo_root, config.excludes_for_scan()):
             continue
         files[file_path] = parse_tear_level(file_path.read_text(), max_tear=config.max_tear)
 

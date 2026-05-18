@@ -32,6 +32,8 @@ class TearsConfig:
     max_tear: int = 3
     directory_requirements: dict[str, int] = field(default_factory=lambda: {})
     exclude: list[str] = field(default_factory=lambda: [])
+    scan_exclude: list[str] = field(default_factory=lambda: [])
+    mutate_exclude: list[str] = field(default_factory=lambda: [])
     source_roots: list[str] = field(default_factory=lambda: ["."])
     import_rules: dict[int, int] | None = None
     missing_header: str = "warn"
@@ -82,6 +84,14 @@ class TearsConfig:
             else:
                 resolved[tier] = frozenset(range(tier + 1))
         return resolved
+
+    def excludes_for_scan(self) -> list[str]:
+        """Exclude patterns that apply while scanning."""
+        return [*self.exclude, *self.scan_exclude]
+
+    def excludes_for_mutation(self) -> list[str]:
+        """Exclude patterns that apply while mutating headers through hooks/CLI."""
+        return [*self.exclude, *self.mutate_exclude]
 
     def resolve_missing_tier(self, rel_path: str) -> tuple[int, bool]:
         """Return (effective_tier, was_defaulted) for a file with no @tear header.
@@ -145,13 +155,19 @@ def _from_mapping(raw: dict[str, Any], *, source: str) -> TearsConfig:
         kwargs["directory_requirements"] = normalized
 
     if "exclude" in raw:
-        exclude_raw = _require_list(raw["exclude"], "exclude", source)
-        exclude: list[str] = []
-        for item in exclude_raw:
-            if not isinstance(item, str):
-                raise ConfigError(f"{source}: exclude entries must be strings, got {item!r}")
-            exclude.append(item)
-        kwargs["exclude"] = exclude
+        kwargs["exclude"] = _parse_string_list(raw["exclude"], "exclude", source)
+
+    if "scan" in raw:
+        scan_raw = _require_mapping(raw["scan"], "scan", source)
+        if "exclude" in scan_raw:
+            kwargs["scan_exclude"] = _parse_string_list(scan_raw["exclude"], "scan.exclude", source)
+
+    if "mutate" in raw:
+        mutate_raw = _require_mapping(raw["mutate"], "mutate", source)
+        if "exclude" in mutate_raw:
+            kwargs["mutate_exclude"] = _parse_string_list(
+                mutate_raw["exclude"], "mutate.exclude", source
+            )
 
     if "imports" in raw:
         imports_raw = _require_mapping(raw["imports"], "imports", source)
@@ -233,3 +249,13 @@ def _require_list(value: Any, key: str, source: str) -> list[Any]:
     if not isinstance(value, list):
         raise ConfigError(f"{source}: {key} must be a list, got {type(value).__name__}")
     return cast(list[Any], value)
+
+
+def _parse_string_list(value: Any, key: str, source: str) -> list[str]:
+    raw = _require_list(value, key, source)
+    parsed: list[str] = []
+    for item in raw:
+        if not isinstance(item, str):
+            raise ConfigError(f"{source}: {key} entries must be strings, got {item!r}")
+        parsed.append(item)
+    return parsed
