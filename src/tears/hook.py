@@ -58,7 +58,7 @@ def process_paths(paths: list[Path]) -> int:
             process_file(
                 path,
                 tear=config.max_tear,
-                exclude=config.exclude,
+                exclude=config.excludes_for_mutation(),
                 repo_root=repo_root,
             )
         except OSError:

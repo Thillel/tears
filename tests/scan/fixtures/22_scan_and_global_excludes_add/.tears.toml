@@ -1,0 +1,11 @@
+# @tear: 3
+exclude = ["src/pkg/global_excluded.py"]
+
+[imports]
+source_roots = ["src"]
+
+[scan]
+exclude = ["src/pkg/scan_excluded.py"]
+
+[mutate]
+exclude = ["src/pkg/mutate_excluded.py"]

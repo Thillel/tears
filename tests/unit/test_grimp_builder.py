@@ -99,6 +99,25 @@ def test_excluded_files_are_omitted_from_files_and_edges(tmp_path: Path) -> None
     assert set(graph.imports_of(routes)) == set()
 
 
+def test_scan_exclude_omits_files_from_graph(tmp_path: Path) -> None:
+    api_init = _write(tmp_path / "api" / "__init__.py")
+    schema = _write(tmp_path / "api" / "schema.py")
+
+    graph = build_grimp_graph(tmp_path, TearsConfig(scan_exclude=["api/schema.py"]))
+
+    assert set(graph.files()) == {api_init}
+    assert schema not in set(graph.files())
+
+
+def test_mutate_exclude_does_not_affect_graph(tmp_path: Path) -> None:
+    api_init = _write(tmp_path / "api" / "__init__.py")
+    schema = _write(tmp_path / "api" / "schema.py")
+
+    graph = build_grimp_graph(tmp_path, TearsConfig(mutate_exclude=["api/schema.py"]))
+
+    assert set(graph.files()) == {api_init, schema}
+
+
 def test_package_root_with_only_init_is_discovered(tmp_path: Path) -> None:
     empty_pkg_init = _write(tmp_path / "empty_pkg" / "__init__.py")
 

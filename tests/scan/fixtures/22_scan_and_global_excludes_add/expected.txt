@@ -1,0 +1,5 @@
+OK    src/pkg/__init__.py (tear 1)
+OK    src/pkg/kept.py (tear 1)
+OK    src/pkg/mutate_excluded.py (tear 1)
+3 files checked, 0 failures, 0 warnings
+--- exit: 0 ---

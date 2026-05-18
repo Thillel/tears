@@ -274,6 +274,12 @@ default_tear = 3
 [imports]
 source_roots = ["src"]
 
+[scan]
+exclude = ["fixtures/**"]
+
+[mutate]
+exclude = [".env"]
+
 [import_rules]
 "1" = 2
 ```
@@ -283,6 +289,9 @@ Config fields:
 - `max_tear`: highest tier number. Defaults to `3`.
 - `missing_header`: `warn` or `error`. Defaults to `warn`.
 - `exclude`: glob patterns ignored by scanner and hook.
+- `scan.exclude`: additional glob patterns ignored only by scanner.
+- `mutate.exclude`: additional glob patterns ignored only by hooks and mutation commands
+  (`set`, `up`, and `down`).
 - `default_tear`: tier to assume for headerless files without warning.
 - `default_tears`: path-specific defaults for headerless files.
 - `directory_requirements`: path-specific maximum allowed tier.
