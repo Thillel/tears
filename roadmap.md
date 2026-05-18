@@ -7,51 +7,44 @@ durable design rationale belongs in [DESIGN.md](./DESIGN.md).
 
 ## Near Term
 
-1. Clarify scan root semantics and make empty scans suspicious.
-
-   Today `tears PATH` treats `PATH` as the config/scan root. Keep that behavior for
-   compatibility with current CI, pre-commit, and GitHub Action usage, and document it
-   clearly as root-mode rather than target filtering.
-
-   Target filtering remains future work. A later release should decide whether to add
-   an explicit form such as `tears --target PATH` or `tears check PATH`, where config is
-   loaded from the repo root and results are filtered to a subpath.
-
-   If a directory contains Python files and `tears` checks zero files, emit a warning or
-   fail with an explanation.
-
-2. Decide and implement consistent `.gitignore` handling.
-
-   Today the scanner partially respects gitignore during top-level package discovery,
-   while the hook only honors `.tears.toml` `exclude`. Decide the policy explicitly,
-   then make scanner and hook behavior match. The likely default is: scanner ignores
-   gitignored files, hook does not mutate gitignored files, and `exclude` remains for
-   tracked files that are intentionally outside tears enforcement.
-
-3. Add an AST/file-walking builder.
+1. Add an AST/file-walking builder.
 
    The current grimp builder is useful for importable Python packages but misses flat
    scripts and namespace packages. A fallback builder should cover ordinary Python files
    and reduce dependency on package layout.
 
-4. Promote this repo's own tiers after review.
+2. Define target-filtering semantics.
+
+   `tears PATH` is now documented as config/scan-root mode. Target filtering remains
+   future work. A later release should decide whether to add an explicit form such as
+   `tears --target PATH` or `tears check PATH`, where config is loaded from the repo root
+   and results are filtered to a subpath.
+
+3. Promote this repo's own tiers after review.
 
    As development chores, review and lower tears on tests first, then implementation
    files. Test fixtures use `.notears` markers for now to record their reviewedness
    without normalizing deliberate fixture headers.
 
-5. Define scope semantics in the design.
+4. Define remaining scope semantics in the design.
 
-   Document repo root discovery, config root, future scan target filtering, file inclusion,
-   excluded files, gitignored files, unsupported files, and empty-scan behavior in one
-   place before scan behavior is broadened.
+   The current docs cover root-mode scanning, gitignore policy, excludes, fixture
+   dogfooding, and empty-scan warnings. Before broadening scanner coverage, finish the
+   design for target filtering, unsupported files, mixed-language repos, and future
+   single-file behavior.
 
-6. Decide and enforce excluded-import semantics.
+5. Decide and enforce excluded-import semantics.
 
    Excluded files currently disappear from the graph, so trusted in-scope code can import
    excluded repo code without warning. Decide whether that should warn, fail, or be
    explicitly allowed by configuration, then expose enough graph information for the
    checker to report it.
+
+6. Keep future-behavior fixtures ahead of scanner work.
+
+   Fixture repos are grouped by suite under `tests/scan/fixtures/<suite>/`. Continue
+   adding strict xfailed fixtures for scanner behavior before implementation, especially
+   where language import resolution has policy choices.
 
 ## Usability
 
@@ -148,7 +141,9 @@ durable design rationale belongs in [DESIGN.md](./DESIGN.md).
 1. Multi-language scanning.
 
    JS/TS and Go are plausible next targets, but each language needs real import
-   resolution. Header insertion alone is not enough.
+   resolution. Header insertion alone is not enough. The TypeScript fixture suite already
+   records first-pass expectations for relative imports, side-effect imports, export-from
+   dependencies, `index.ts` resolution, and `import type` trust dependencies.
 
 2. Import aliases.
 
