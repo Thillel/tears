@@ -193,8 +193,8 @@ jobs:
           path: .
 ```
 
-The GitHub Action accepts a `path` input, but with the current scanner that path should
-be the repo root.
+The GitHub Action accepts a `path` input. With the current scanner, that path is the
+scan root, not a subpath filter.
 
 ## Tear Levels
 
@@ -298,7 +298,8 @@ through Python package roots.
 Current scanner limitations:
 
 - `tears` is a full-repo scan.
-- `tears PATH` currently treats `PATH` as the repo root, not as a subpath filter.
+- `tears PATH` treats `PATH` as the config/scan root, not as a subpath filter.
+- Target filtering is not implemented yet.
 - Single-file scans such as `tears src/foo.py` are not implemented.
 - Flat scripts and namespace packages may be missed by the current grimp-backed scanner.
 

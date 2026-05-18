@@ -75,6 +75,12 @@ The current scanner uses grimp:
 This is good for package import semantics, but it means discovery is limited by package
 layout. Flat scripts and namespace packages are a known gap.
 
+The optional CLI path is currently a scan root, not a target filter. For example,
+`tears some/repo` loads configuration from `some/repo` and scans from there. It does
+not mean "load the current repo config and report only files under `some/repo`."
+This very much might change in future versions, stay tuned.
+Target filtering remains future work.
+
 ## Hooks
 
 The hook path is separate from the scan path. Hooks do not validate imports. They only
@@ -129,7 +135,7 @@ The main missing test layer is direct coverage for `graph/grimp_builder.py`.
 
 - Scanner support is Python-only.
 - Discovery is currently grimp/package-layout dependent.
-- `tears PATH` currently treats `PATH` as the scan root.
+- `tears PATH` currently treats `PATH` as the config/scan root, not a target filter.
 - Single-file checks are not implemented.
 - `.gitignore` handling is asymmetric today. The scanner skips gitignored top-level
   package directories during discovery, but does not apply gitignore checks uniformly to

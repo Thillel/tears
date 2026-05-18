@@ -78,7 +78,7 @@ def _cmd_scan(argv: list[str]) -> int:
         "path",
         nargs="?",
         default=".",
-        help="Path to scan (defaults to the current directory).",
+        help="Scan root to load config from and scan (defaults to the current directory).",
     )
     parser.add_argument(
         "--version",

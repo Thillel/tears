@@ -7,14 +7,15 @@ durable design rationale belongs in [DESIGN.md](./DESIGN.md).
 
 ## Near Term
 
-1. Fix scan target semantics and make empty scans suspicious.
+1. Clarify scan root semantics and make empty scans suspicious.
 
-   `tears PATH` should find the repo root, load config from that root, build the graph
-   from the repo root, and filter results to `PATH`. Today `PATH` is treated as the scan
-   root.
+   Today `tears PATH` treats `PATH` as the config/scan root. Keep that behavior for
+   compatibility with current CI, pre-commit, and GitHub Action usage, and document it
+   clearly as root-mode rather than target filtering.
 
-   `tears file.py` should either check that file directly or fail with a clear message.
-   It must not silently report `0 files checked` for an existing Python file.
+   Target filtering remains future work. A later release should decide whether to add
+   an explicit form such as `tears --target PATH` or `tears check PATH`, where config is
+   loaded from the repo root and results are filtered to a subpath.
 
    If a directory contains Python files and `tears` checks zero files, emit a warning or
    fail with an explanation.
@@ -41,7 +42,7 @@ durable design rationale belongs in [DESIGN.md](./DESIGN.md).
 
 5. Define scope semantics in the design.
 
-   Document repo root discovery, config root, scan target filtering, file inclusion,
+   Document repo root discovery, config root, future scan target filtering, file inclusion,
    excluded files, gitignored files, unsupported files, and empty-scan behavior in one
    place before scan behavior is broadened.
 
