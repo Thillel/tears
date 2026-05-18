@@ -1,0 +1,1 @@
+TypeScript files and relative imports are not discovered until TypeScript scanner support exists.

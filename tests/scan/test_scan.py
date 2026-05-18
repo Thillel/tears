@@ -1,9 +1,9 @@
 # @tear: 3
 """Snapshot-based integration tests.
 
-Each directory under `tests/scan/fixtures/` is a complete mini-repo. The runner
-copies the fixture into a temp dir (so tests can't mutate fixtures), runs the
-bare `tears` CLI against it, and compares the output + exit code against
+Each directory under `tests/scan/fixtures/<suite>/` is a complete mini-repo. The
+runner copies the fixture into a temp dir (so tests can't mutate fixtures), runs
+the bare `tears` CLI against it, and compares the output + exit code against
 `expected.txt`.
 
 Future-behavior fixtures may include a `pytest.xfail` file containing a human
@@ -38,31 +38,34 @@ def _discover_fixtures() -> list[object]:
     if not FIXTURES_DIR.exists():
         return []
     params: list[object] = []
-    for fixture_dir in sorted(
-        (p for p in FIXTURES_DIR.iterdir() if p.is_dir()), key=lambda p: p.name
-    ):
-        xfail_path = fixture_dir / XFAIL_MARKER
-        if not xfail_path.exists():
-            params.append(fixture_dir.name)
-            continue
-        reason = xfail_path.read_text().strip() or f"{fixture_dir.name} is expected to fail"
-        params.append(
-            pytest.param(
-                fixture_dir.name,
-                marks=pytest.mark.xfail(reason=reason, strict=True),
+    suite_dirs = sorted((p for p in FIXTURES_DIR.iterdir() if p.is_dir()), key=lambda p: p.name)
+    for suite_dir in suite_dirs:
+        fixture_dirs = sorted((p for p in suite_dir.iterdir() if p.is_dir()), key=lambda p: p.name)
+        for fixture_dir in fixture_dirs:
+            fixture_id = f"{suite_dir.name}/{fixture_dir.name}"
+            xfail_path = fixture_dir / XFAIL_MARKER
+            if not xfail_path.exists():
+                params.append(fixture_id)
+                continue
+            reason = xfail_path.read_text().strip() or f"{fixture_id} is expected to fail"
+            params.append(
+                pytest.param(
+                    fixture_id,
+                    marks=pytest.mark.xfail(reason=reason, strict=True),
+                )
             )
-        )
     return params
 
 
 def test_xfail_fixtures_are_strict() -> None:
     """Future-behavior fixtures must fail as XPASS once their snapshots match."""
     fixture_params = [cast(Any, p) for p in _discover_fixtures() if not isinstance(p, str)]
-    flat_script = next(p for p in fixture_params if p.values == ("30_flat_script_future",))
-    xfail_marks = [mark for mark in flat_script.marks if mark.name == "xfail"]
+    assert fixture_params
 
-    assert len(xfail_marks) == 1
-    assert xfail_marks[0].kwargs["strict"] is True
+    for fixture_param in fixture_params:
+        xfail_marks = [mark for mark in fixture_param.marks if mark.name == "xfail"]
+        assert len(xfail_marks) == 1, fixture_param.values
+        assert xfail_marks[0].kwargs["strict"] is True
 
 
 @pytest.mark.parametrize("fixture", _discover_fixtures())
