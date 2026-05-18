@@ -60,11 +60,12 @@ def _discover_fixtures() -> list[object]:
 def test_xfail_fixtures_are_strict() -> None:
     """Future-behavior fixtures must fail as XPASS once their snapshots match."""
     fixture_params = [cast(Any, p) for p in _discover_fixtures() if not isinstance(p, str)]
-    flat_script = next(p for p in fixture_params if p.values == ("python/30_flat_script_future",))
-    xfail_marks = [mark for mark in flat_script.marks if mark.name == "xfail"]
+    assert fixture_params
 
-    assert len(xfail_marks) == 1
-    assert xfail_marks[0].kwargs["strict"] is True
+    for fixture_param in fixture_params:
+        xfail_marks = [mark for mark in fixture_param.marks if mark.name == "xfail"]
+        assert len(xfail_marks) == 1, fixture_param.values
+        assert xfail_marks[0].kwargs["strict"] is True
 
 
 @pytest.mark.parametrize("fixture", _discover_fixtures())

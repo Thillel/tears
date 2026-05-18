@@ -1,0 +1,6 @@
+FAIL  src/main.ts (tear 0)
+  - imports src/types.ts (tear 3): tear 0 cannot import from tear 3
+
+OK    src/types.ts (tear 3)
+2 files checked, 1 failure, 0 warnings
+--- exit: 1 ---
