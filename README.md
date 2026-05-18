@@ -334,7 +334,15 @@ make check
 make test
 ```
 
-`make check` runs formatting, linting, strict type checking, and tests.
+`make check` runs formatting, linting, strict type checking, a `tears .` self-scan,
+and tests.
+
+## Test Dogfooding
+
+Real test code dogfoods `tears`; this repo uses `[artificial_tears]` where tests need
+to import lower-trust implementation files. Scan fixtures under
+`tests/scan/fixtures/**` are linter input data, so they are excluded and may contain
+deliberate missing headers, unusual tear values, and future expectations.
 
 ## License
 

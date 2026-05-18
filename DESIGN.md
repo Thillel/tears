@@ -136,7 +136,31 @@ The test suite has two layers:
 The checker is tested against an in-memory fake graph. This keeps rule tests independent
 from grimp and filesystem behavior.
 
-The main missing test layer is direct coverage for `graph/grimp_builder.py`.
+The grimp-backed graph builder has direct unit coverage for discovery, excludes,
+gitignore handling, and import-edge behavior.
+
+## Dogfooding Policy
+
+There are two kinds of test files in this repo:
+
+- real test code under `tests/unit/` and `tests/scan/test_scan.py`;
+- scan fixture input data under `tests/scan/fixtures/**`.
+
+Real test code should dogfood `tears` normally. The repo includes `.` in
+`[imports].source_roots` so test packages can be discovered, and uses
+`[artificial_tears]` for `tests/unit` so reviewed tests can import lower-trust code
+when they need to exercise checker and mutation behavior. Artificial tears are an import
+budget only; they do not change a test file's own review tier.
+
+Scan fixtures are not project code. They are mini-repositories used as linter inputs,
+and they deliberately contain missing headers, invalid configurations, xfailed future
+expectations, and unusual tear values. Excluding those fixture trees from both scan and
+header marking is part of the test design, not an escape hatch from dogfooding. The
+snapshot diff is the review surface for fixture behavior.
+
+`.notears` files in fixture trees are human-readable markers. They document that a tree
+is intentionally outside normal repo reviewedness policy, but `tears` does not enforce
+`.notears` automatically in this milestone.
 
 ## Known Limitations
 
