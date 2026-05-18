@@ -1,0 +1,1 @@
+Flat Python files are not discovered until the AST/file-walking builder exists.
