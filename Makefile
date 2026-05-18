@@ -5,6 +5,7 @@ lint:
 	uv run ruff format src tests
 	uv run ruff check --fix src tests
 	uv run pyright src tests
+	uv run tears .
 
 test:
 	uv run pytest

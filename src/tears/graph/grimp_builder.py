@@ -12,7 +12,6 @@ Builds the graph by:
 from __future__ import annotations
 
 import contextlib
-import subprocess
 import sys
 from collections.abc import Iterable
 from pathlib import Path
@@ -21,7 +20,7 @@ from typing import Any, cast
 import grimp
 
 from tears.config import TearsConfig
-from tears.exclude import is_excluded
+from tears.exclude import should_skip_path
 from tears.header import parse_tear_level
 
 
@@ -65,7 +64,12 @@ def build_grimp_graph(repo_root: Path, config: TearsConfig) -> GrimpImportGraph:
             if (
                 child.is_dir()
                 and (child / "__init__.py").exists()
-                and not _git_ignored(child, repo_root)
+                and not should_skip_path(
+                    child,
+                    repo_root,
+                    patterns=config.excludes_for_scan(),
+                    respect_gitignore=config.respect_gitignore_for_scan(),
+                )
             ):
                 packages.append((child.name, sr))
 
@@ -92,7 +96,12 @@ def build_grimp_graph(repo_root: Path, config: TearsConfig) -> GrimpImportGraph:
 
     files: dict[Path, int | None] = {}
     for file_path in module_to_file.values():
-        if is_excluded(file_path, repo_root, config.excludes_for_scan()):
+        if should_skip_path(
+            file_path,
+            repo_root,
+            patterns=config.excludes_for_scan(),
+            respect_gitignore=config.respect_gitignore_for_scan(),
+        ):
             continue
         files[file_path] = parse_tear_level(file_path.read_text(), max_tear=config.max_tear)
 
@@ -129,17 +138,3 @@ def _build_module_index(package_roots: dict[str, Path]) -> dict[str, Path]:
             module = ".".join((pkg_name, *parts)) if parts else pkg_name
             index[module] = py_file.resolve()
     return index
-
-
-def _git_ignored(path: Path, repo_root: Path) -> bool:
-    """Return True if `path` is ignored by git, False if not or if git is unavailable."""
-    try:
-        result = subprocess.run(
-            ["git", "check-ignore", "-q", "--", str(path)],
-            capture_output=True,
-            cwd=repo_root,
-            timeout=5,
-        )
-        return result.returncode == 0
-    except (OSError, subprocess.TimeoutExpired):
-        return False

@@ -11,7 +11,7 @@ from importlib.metadata import version as _pkg_version
 from pathlib import Path
 
 from tears.config import CONFIG_FILENAME, ConfigError, TearsConfig, load_config
-from tears.exclude import is_excluded
+from tears.exclude import should_skip_path
 from tears.header import parse_tear_level
 from tears.mutate import find_repo_root, process_file
 from tears.scan import run_scan
@@ -20,6 +20,7 @@ _SUBCOMMANDS = frozenset({"up", "down", "set", "init"})
 
 _DEFAULT_TOML = """# @tear: 3
 max_tear = 3
+respect_gitignore = true
 
 # Soft trial mode: existing files without @tear headers are treated as reviewed.
 # Full adoption:
@@ -37,13 +38,19 @@ missing_header = "warn"
 # "src/auth" = 0
 # "src/api" = 1
 
+# Give specific directories an artificial import budget.
+# [artificial_tears]
+# "tests/unit" = 3
+
 # Configure scan-only exclusions.
 # [scan]
 # exclude = ["fixtures/**"]
+# respect_gitignore = false
 
-# Skip automatic @tear header marking for hooks and set/up/down commands.
+# Configure automatic @tear header marking by hooks and set/up/down.
 # [mutate]
 # exclude = ["vendor/**"]
+# respect_gitignore = false
 """
 
 
@@ -188,6 +195,8 @@ def _apply_up_file(
     bulk: bool,
     missing_only: bool,
 ) -> int:
+    if _should_skip_mutation(path, config, repo_root):
+        return 0
     content = _read_text_or_skip(path)
     if content is None:
         return 0
@@ -253,6 +262,8 @@ def _apply_down_file(
     bulk: bool,
     missing_only: bool,
 ) -> int:
+    if _should_skip_mutation(path, config, repo_root):
+        return 0
     content = _read_text_or_skip(path)
     if content is None:
         return 0
@@ -332,6 +343,8 @@ def _apply_set_file(
     *,
     missing_only: bool,
 ) -> int:
+    if _should_skip_mutation(path, config, repo_root):
+        return 0
     content = _read_text_or_skip(path)
     if content is None:
         return 0
@@ -354,10 +367,19 @@ def _walk(root: Path, config: TearsConfig, repo_root: Path) -> list[Path]:
             continue
         if ".git" in file_path.parts or "__pycache__" in file_path.parts:
             continue
-        if is_excluded(file_path, repo_root, config.excludes_for_mutation()):
+        if _should_skip_mutation(file_path, config, repo_root):
             continue
         results.append(file_path)
     return results
+
+
+def _should_skip_mutation(path: Path, config: TearsConfig, repo_root: Path) -> bool:
+    return should_skip_path(
+        path,
+        repo_root,
+        patterns=config.excludes_for_mutation(),
+        respect_gitignore=config.respect_gitignore_for_mutation(),
+    )
 
 
 def _read_text_or_skip(path: Path) -> str | None:

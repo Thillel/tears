@@ -1,0 +1,7 @@
+# @tear: 3
+
+[imports]
+source_roots = ["src"]
+
+[artificial_tears]
+"src/tests/unit" = 3

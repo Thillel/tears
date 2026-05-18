@@ -14,7 +14,7 @@ from pathlib import Path
 
 from tears.checker import CheckReport, FileReport, check
 from tears.config import TearsConfig, load_config
-from tears.exclude import is_excluded
+from tears.exclude import should_skip_path
 from tears.graph.grimp_builder import build_grimp_graph
 
 _ANSI = {
@@ -103,7 +103,12 @@ def _has_candidate_source_files(repo_root: Path, *, config: TearsConfig) -> bool
             continue
         if ".git" in path.parts or "__pycache__" in path.parts:
             continue
-        if is_excluded(path, repo_root, config.exclude):
+        if should_skip_path(
+            path,
+            repo_root,
+            patterns=config.excludes_for_scan(),
+            respect_gitignore=config.respect_gitignore_for_scan(),
+        ):
             continue
         return True
     return False

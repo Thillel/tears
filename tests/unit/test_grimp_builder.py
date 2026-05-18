@@ -7,12 +7,10 @@ the end-to-end scan snapshots.
 
 from __future__ import annotations
 
+import subprocess
 from pathlib import Path
 
-import pytest
-
 from tears.config import TearsConfig
-from tears.graph import grimp_builder
 from tears.graph.grimp_builder import build_grimp_graph
 
 
@@ -20,6 +18,10 @@ def _write(path: Path, text: str = "# @tear: 1\n") -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text)
     return path.resolve()
+
+
+def _init_git_repo(path: Path) -> None:
+    subprocess.run(["git", "init", "-q"], cwd=path, check=True)
 
 
 def test_discovers_top_level_packages_and_import_edges(tmp_path: Path) -> None:
@@ -70,22 +72,64 @@ def test_namespace_packages_are_not_discovered(tmp_path: Path) -> None:
     assert set(graph.files()) == set()
 
 
-def test_git_ignored_top_level_package_is_not_discovered(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_git_ignored_top_level_package_is_not_discovered(tmp_path: Path) -> None:
+    _init_git_repo(tmp_path)
+    (tmp_path / ".gitignore").write_text("ignored/\n")
     kept = _write(tmp_path / "kept" / "__init__.py")
-    ignored = _write(tmp_path / "ignored" / "__init__.py")
-
-    def fake_git_ignored(path: Path, repo_root: Path) -> bool:
-        assert repo_root == tmp_path.resolve()
-        return path.resolve() == ignored.parent
-
-    monkeypatch.setattr(grimp_builder, "_git_ignored", fake_git_ignored)
+    _write(tmp_path / "ignored" / "__init__.py")
 
     graph = build_grimp_graph(tmp_path, TearsConfig())
 
     assert set(graph.files()) == {kept}
+
+
+def test_scan_gitignore_override_discovers_ignored_package(tmp_path: Path) -> None:
+    _init_git_repo(tmp_path)
+    (tmp_path / ".gitignore").write_text("ignored/\n")
+    ignored = _write(tmp_path / "ignored" / "__init__.py")
+
+    graph = build_grimp_graph(tmp_path, TearsConfig(scan_respect_gitignore=False))
+
+    assert set(graph.files()) == {ignored}
+
+
+def test_scan_gitignore_section_override_beats_global_false(tmp_path: Path) -> None:
+    _init_git_repo(tmp_path)
+    (tmp_path / ".gitignore").write_text("ignored/\n")
+    _write(tmp_path / "ignored" / "__init__.py")
+
+    graph = build_grimp_graph(
+        tmp_path,
+        TearsConfig(respect_gitignore=False, scan_respect_gitignore=True),
+    )
+
+    assert set(graph.files()) == set()
+
+
+def test_git_ignored_file_inside_kept_package_is_omitted(tmp_path: Path) -> None:
+    _init_git_repo(tmp_path)
+    (tmp_path / ".gitignore").write_text("pkg/generated.py\n")
+    pkg_init = _write(tmp_path / "pkg" / "__init__.py", "# @tear: 1\nfrom . import generated\n")
+    _write(tmp_path / "pkg" / "generated.py", "# @tear: 3\n")
+
+    graph = build_grimp_graph(tmp_path, TearsConfig())
+
+    assert set(graph.files()) == {pkg_init}
+    assert set(graph.imports_of(pkg_init)) == set()
+
+
+def test_explicit_scan_exclude_wins_when_gitignore_disabled(tmp_path: Path) -> None:
+    _init_git_repo(tmp_path)
+    (tmp_path / ".gitignore").write_text("pkg/generated.py\n")
+    pkg_init = _write(tmp_path / "pkg" / "__init__.py")
+    _write(tmp_path / "pkg" / "generated.py")
+
+    graph = build_grimp_graph(
+        tmp_path,
+        TearsConfig(respect_gitignore=False, exclude=["pkg/generated.py"]),
+    )
+
+    assert set(graph.files()) == {pkg_init}
 
 
 def test_excluded_files_are_omitted_from_files_and_edges(tmp_path: Path) -> None:
