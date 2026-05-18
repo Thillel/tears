@@ -2,14 +2,17 @@
 # Repo's own tears config. Excludes the snapshot-test fixtures so neither
 # `tears` nor the Claude hook treats their intentional tier headers as real
 # attestations.
-# Unit tests are scan-excluded for now, but not hook-excluded, so edits there
-# still get demoted and reviewed through the normal header workflow.
+# Unit tests dogfood scan now. Artificial tears let reviewed tests import
+# lower-trust code to exercise checker and mutation behavior.
 
 [imports]
-source_roots = ["src"]
+source_roots = ["src", "."]
 
 [scan]
-exclude = ["tests/scan/fixtures/**", "tests/unit/**"]
+exclude = ["tests/scan/fixtures/**"]
 
 [mutate]
 exclude = ["tests/scan/fixtures/**"]
+
+[artificial_tears]
+"tests/unit" = 3

@@ -30,6 +30,7 @@ from pathlib import Path
 from typing import Any, cast
 
 from tears.config import ConfigError, TearsConfig, load_config
+from tears.exclude import should_skip_path
 from tears.mutate import find_repo_root, process_file
 
 
@@ -54,6 +55,13 @@ def process_paths(paths: list[Path]) -> int:
         config = TearsConfig()
 
     for path in paths:
+        if should_skip_path(
+            path,
+            repo_root,
+            patterns=config.excludes_for_mutation(),
+            respect_gitignore=config.respect_gitignore_for_mutation(),
+        ):
+            continue
         try:
             process_file(
                 path,

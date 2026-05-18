@@ -7,11 +7,16 @@ which is covered by the fixture-based integration tests.
 
 from __future__ import annotations
 
+import subprocess
 from pathlib import Path
 
 import pytest
 
 from tears.cli import main as cli_main
+
+
+def _init_git_repo(path: Path) -> None:
+    subprocess.run(["git", "init", "-q"], cwd=path, check=True)
 
 
 def _make_repo(tmp_path: Path, *, pkg_content: str = "", toml: str = "") -> Path:
@@ -289,6 +294,7 @@ def test_init_creates_config_without_tagging_files(
     assert (tmp_path / ".tears.toml").read_text() == (
         "# @tear: 3\n"
         "max_tear = 3\n"
+        "respect_gitignore = true\n"
         "\n"
         "# Soft trial mode: existing files without @tear headers are treated as reviewed.\n"
         "# Full adoption:\n"
@@ -306,13 +312,19 @@ def test_init_creates_config_without_tagging_files(
         '# "src/auth" = 0\n'
         '# "src/api" = 1\n'
         "\n"
+        "# Give specific directories an artificial import budget.\n"
+        "# [artificial_tears]\n"
+        '# "tests/unit" = 3\n'
+        "\n"
         "# Configure scan-only exclusions.\n"
         "# [scan]\n"
         '# exclude = ["fixtures/**"]\n'
+        "# respect_gitignore = false\n"
         "\n"
-        "# Skip automatic @tear header marking for hooks and set/up/down commands.\n"
+        "# Configure automatic @tear header marking by hooks and set/up/down.\n"
         "# [mutate]\n"
         '# exclude = ["vendor/**"]\n'
+        "# respect_gitignore = false\n"
     )
     assert (tmp_path / "a.py").read_text() == "import os\n"
     assert (tmp_path / "b.py").read_text() == "# @tear: 1\nx = 1\n"  # untouched
@@ -454,6 +466,33 @@ def test_set_dir_respects_mutate_exclude(tmp_path: Path) -> None:
 
 def test_set_dir_ignores_scan_exclude(tmp_path: Path) -> None:
     (tmp_path / ".tears.toml").write_text('[scan]\nexclude = ["src/generated.py"]\n')
+    sub = tmp_path / "src"
+    sub.mkdir()
+    (sub / "generated.py").write_text("x = 1\n")
+
+    assert cli_main(["set", str(sub), "--tear", "1"]) == 0
+
+    assert (sub / "generated.py").read_text() == "# @tear: 1\nx = 1\n"
+
+
+def test_set_dir_respects_gitignore_by_default(tmp_path: Path) -> None:
+    _init_git_repo(tmp_path)
+    (tmp_path / ".gitignore").write_text("src/generated.py\n")
+    sub = tmp_path / "src"
+    sub.mkdir()
+    (sub / "generated.py").write_text("x = 1\n")
+    (sub / "normal.py").write_text("y = 2\n")
+
+    assert cli_main(["set", str(sub), "--tear", "1"]) == 0
+
+    assert (sub / "generated.py").read_text() == "x = 1\n"
+    assert (sub / "normal.py").read_text() == "# @tear: 1\ny = 2\n"
+
+
+def test_set_dir_mutate_gitignore_override_allows_marking(tmp_path: Path) -> None:
+    _init_git_repo(tmp_path)
+    (tmp_path / ".gitignore").write_text("src/generated.py\n")
+    (tmp_path / ".tears.toml").write_text("[mutate]\nrespect_gitignore = false\n")
     sub = tmp_path / "src"
     sub.mkdir()
     (sub / "generated.py").write_text("x = 1\n")

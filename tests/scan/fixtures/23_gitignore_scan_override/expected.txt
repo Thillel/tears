@@ -1,0 +1,4 @@
+OK    ignored/__init__.py (tear 1)
+OK    kept/__init__.py (tear 1)
+2 files checked, 0 failures, 0 warnings
+--- exit: 0 ---

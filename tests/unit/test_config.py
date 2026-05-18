@@ -14,7 +14,11 @@ def test_defaults() -> None:
     cfg = TearsConfig()
     assert cfg.max_tear == 3
     assert cfg.directory_requirements == {}
+    assert cfg.artificial_tears == {}
     assert cfg.exclude == []
+    assert cfg.respect_gitignore is True
+    assert cfg.scan_respect_gitignore is None
+    assert cfg.mutate_respect_gitignore is None
     assert cfg.source_roots == ["."]
     assert cfg.import_rules is None
     assert cfg.missing_header == "warn"
@@ -28,17 +32,23 @@ def test_load_toml(tmp_path: Path) -> None:
     (tmp_path / ".tears.toml").write_text(
         "max_tear = 5\n"
         'exclude = ["**/*.generated.py"]\n'
+        "respect_gitignore = false\n"
         'missing_header = "error"\n'
         "\n"
         "[scan]\n"
         'exclude = ["scan-only/**"]\n'
+        "respect_gitignore = true\n"
         "\n"
         "[mutate]\n"
         'exclude = ["mutate-only/**"]\n'
+        "respect_gitignore = false\n"
         "\n"
         "[directory_requirements]\n"
         '"src/auth" = 0\n'
         '"src/api" = 2\n'
+        "\n"
+        "[artificial_tears]\n"
+        '"tests/unit" = 5\n'
         "\n"
         "[imports]\n"
         'source_roots = ["src"]\n'
@@ -49,20 +59,30 @@ def test_load_toml(tmp_path: Path) -> None:
     cfg = load_config(tmp_path)
     assert cfg.max_tear == 5
     assert cfg.directory_requirements == {"src/auth": 0, "src/api": 2}
+    assert cfg.artificial_tears == {"tests/unit": 5}
+    assert cfg.artificial_tear_for("tests/unit/test_checker.py") == 5
     assert cfg.exclude == ["**/*.generated.py"]
     assert cfg.scan_exclude == ["scan-only/**"]
     assert cfg.mutate_exclude == ["mutate-only/**"]
     assert cfg.excludes_for_scan() == ["**/*.generated.py", "scan-only/**"]
     assert cfg.excludes_for_mutation() == ["**/*.generated.py", "mutate-only/**"]
+    assert cfg.respect_gitignore is False
+    assert cfg.scan_respect_gitignore is True
+    assert cfg.mutate_respect_gitignore is False
+    assert cfg.respect_gitignore_for_scan() is True
+    assert cfg.respect_gitignore_for_mutation() is False
     assert cfg.source_roots == ["src"]
     assert cfg.import_rules == {1: 2}
     assert cfg.missing_header == "error"
 
 
 def test_trailing_slashes_in_directory_keys_normalized(tmp_path: Path) -> None:
-    (tmp_path / ".tears.toml").write_text('[directory_requirements]\n"src/auth/" = 0\n')
+    (tmp_path / ".tears.toml").write_text(
+        '[directory_requirements]\n"src/auth/" = 0\n\n[artificial_tears]\n"tests/unit/" = 3\n'
+    )
     cfg = load_config(tmp_path)
     assert cfg.directory_requirements == {"src/auth": 0}
+    assert cfg.artificial_tears == {"tests/unit": 3}
 
 
 def test_max_tear_must_be_at_least_1() -> None:
@@ -73,6 +93,29 @@ def test_max_tear_must_be_at_least_1() -> None:
 def test_directory_requirement_exceeds_max_tear() -> None:
     with pytest.raises(ConfigError, match="exceeds max_tear 3"):
         TearsConfig(max_tear=3, directory_requirements={"src/auth": 5})
+
+
+def test_artificial_tear_exceeds_max_tear() -> None:
+    with pytest.raises(ConfigError, match="exceeds max_tear 3"):
+        TearsConfig(max_tear=3, artificial_tears={"tests/unit": 5})
+
+
+def test_artificial_tear_longest_prefix() -> None:
+    cfg = TearsConfig(artificial_tears={"tests": 2, "tests/unit": 3})
+
+    assert cfg.artificial_tear_for("tests/unit/test_checker.py") == 3
+    assert cfg.artificial_tear_for("tests/scan/test_scan.py") == 2
+    assert cfg.artificial_tear_for("tests_extra/test_checker.py") is None
+
+
+def test_artificial_tears_reject_glob_keys(tmp_path: Path) -> None:
+    (tmp_path / ".tears.toml").write_text('[artificial_tears]\n"tests/*" = 3\n')
+
+    with pytest.raises(
+        ConfigError,
+        match=r"artificial_tears keys are directory paths, not glob patterns",
+    ):
+        load_config(tmp_path)
 
 
 def test_import_rules_exceed_max_tear() -> None:
@@ -125,4 +168,11 @@ def test_consumer_specific_excludes_must_be_string_lists(tmp_path: Path) -> None
     (tmp_path / ".tears.toml").write_text("[scan]\nexclude = [1]\n")
 
     with pytest.raises(ConfigError, match=r"scan\.exclude entries must be strings"):
+        load_config(tmp_path)
+
+
+def test_respect_gitignore_must_be_bool(tmp_path: Path) -> None:
+    (tmp_path / ".tears.toml").write_text("[mutate]\nrespect_gitignore = 1\n")
+
+    with pytest.raises(ConfigError, match=r"mutate\.respect_gitignore must be bool"):
         load_config(tmp_path)

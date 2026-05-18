@@ -117,7 +117,12 @@ Important config choices:
 - `exclude` is shared by scanner and hook.
 - `scan.exclude` and `mutate.exclude` add consumer-specific exclusions without changing
   the shared `exclude` behavior.
+- `respect_gitignore` defaults to skipping gitignored files, with `[scan]` and
+  `[mutate]` overrides for scanner and header-marking behavior.
 - `import_rules` can relax or restrict the default import matrix.
+- `artificial_tears` gives importer paths a deliberate import budget. This keeps a
+  file's real review tier intact while allowing test directories to import lower-trust
+  code they need to exercise.
 
 ## Testing Strategy
 
@@ -139,10 +144,9 @@ The main missing test layer is direct coverage for `graph/grimp_builder.py`.
 - Discovery is currently grimp/package-layout dependent.
 - `tears PATH` currently treats `PATH` as the config/scan root, not a target filter.
 - Single-file checks are not implemented.
-- `.gitignore` handling is asymmetric today. The scanner skips gitignored top-level
-  package directories during discovery, but does not apply gitignore checks uniformly to
-  every discovered file. The hook honors `.tears.toml` `exclude`, but does not currently
-  skip files just because they are gitignored.
+- `.gitignore` handling is configurable and symmetric by default: scanner and
+  header-marking paths skip gitignored files unless the global or section-specific
+  config opts into them.
 - Re-exports through `__init__.py` are not followed as transitive trust checks.
 - Dynamic imports are invisible.
 - Excluded files can be a trust-laundering vector if teams exclude shims that re-export
@@ -150,15 +154,46 @@ The main missing test layer is direct coverage for `graph/grimp_builder.py`.
 
 ## Gitignore Policy
 
-The intended policy still needs to be made explicit before stable release. The likely
-rule is:
+Gitignore handling is policy, not discovery accident:
 
-- the scanner should ignore files ignored by git, unless a user explicitly opts into
-  scanning them;
-- the hook should avoid mutating gitignored files by default, because generated,
-  vendored, cache, and environment files should not receive repo trust headers;
-- `.tears.toml` `exclude` remains the explicit project-level policy for files that are
-  tracked but should be outside tears enforcement.
+- the scanner ignores files ignored by git unless a user explicitly opts into scanning
+  them;
+- the hook and `tears set/up/down` avoid marking gitignored files by default, because
+  generated, vendored, cache, and environment files should not receive repo trust
+  headers;
+- `.tears.toml` `exclude` remains the explicit project-level policy for tracked files
+  that should be outside tears enforcement.
+
+The config shape follows the same global-plus-section pattern as excludes:
+
+```toml
+respect_gitignore = true
+
+[scan]
+respect_gitignore = true
+
+[mutate]
+respect_gitignore = true
+```
+
+## Artificial Tears
+
+Artificial tears are path-specific import budgets. They let files in a directory import
+targets up to a configured tear without changing the files' real `@tear` headers.
+
+The motivating case is tests. A reviewed test may need to import unreviewed code to
+assert that the checker reports a violation, or to exercise header mutation behavior.
+Promoting the test to tear 3 would erase its reviewedness signal; relaxing tier 1
+globally would weaken the policy everywhere. An artificial tear is scoped to the
+importer path instead:
+
+```toml
+[artificial_tears]
+"tests/unit" = 3
+```
+
+This means files under `tests/unit` may import targets at tear 0, 1, 2, or 3. It does
+not change those test files' own tiers, and it does not affect files outside that path.
 
 This is separate from `.notears`, which is currently a human marker in fixtures rather
 than an enforced exclusion mechanism.

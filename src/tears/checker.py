@@ -104,16 +104,28 @@ def check(
             else:
                 target_rel_path = _relative_posix(target, repo_root)
                 target_effective, _ = config.resolve_missing_tier(target_rel_path)
-            if can_import(effective_tier, target_effective, resolved_rules):
+            artificial_tear = config.artificial_tear_for(rel_path)
+            if artificial_tear is not None:
+                can_import_target = target_effective <= artificial_tear
+            else:
+                can_import_target = can_import(effective_tier, target_effective, resolved_rules)
+            if can_import_target:
                 continue
             target_rel = _relative_posix(target, repo_root)
+            if artificial_tear is not None:
+                message = (
+                    f"imports {target_rel} (tear {target_effective}): "
+                    f"artificial tear allows imports up to tear {artificial_tear}"
+                )
+            else:
+                message = (
+                    f"imports {target_rel} (tear {target_effective}): "
+                    f"tear {effective_tier} cannot import from tear {target_effective}"
+                )
             issues.append(
                 Issue(
                     severity="fail",
-                    message=(
-                        f"imports {target_rel} (tear {target_effective}): "
-                        f"tear {effective_tier} cannot import from tear {target_effective}"
-                    ),
+                    message=message,
                 )
             )
 

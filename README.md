@@ -261,6 +261,7 @@ an existing `@tear` header.
 # @tear: 3
 max_tear = 3
 missing_header = "warn"
+respect_gitignore = true
 exclude = ["tests/scan/fixtures/**", "**/*.generated.py"]
 default_tear = 3
 
@@ -271,6 +272,9 @@ default_tear = 3
 "src/auth" = 0
 "src/api" = 1
 
+[artificial_tears]
+"tests/unit" = 3
+
 [imports]
 source_roots = ["src"]
 
@@ -278,7 +282,7 @@ source_roots = ["src"]
 exclude = ["fixtures/**"]
 
 [mutate]
-exclude = [".env"]
+exclude = ["vendor/**"]
 
 [import_rules]
 "1" = 2
@@ -292,9 +296,14 @@ Config fields:
 - `scan.exclude`: additional glob patterns ignored only by scanner.
 - `mutate.exclude`: additional glob patterns ignored only by hooks and mutation commands
   (`set`, `up`, and `down`).
+- `respect_gitignore`: whether gitignored paths are skipped. Defaults to `true`.
+- `scan.respect_gitignore`: scanner-specific override for `respect_gitignore`.
+- `mutate.respect_gitignore`: hook and mutation-command override for `respect_gitignore`.
 - `default_tear`: tier to assume for headerless files without warning.
 - `default_tears`: path-specific defaults for headerless files.
 - `directory_requirements`: path-specific maximum allowed tier.
+- `artificial_tears`: path-specific import budgets. Matching files may import targets
+  up to the configured tier regardless of their own reviewedness tier.
 - `imports.source_roots`: roots used for Python package discovery.
 - `import_rules`: optional per-tier import relaxation or restriction.
 

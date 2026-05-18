@@ -10,6 +10,7 @@ from typing import Any, cast
 
 CONFIG_FILENAME = ".tears.toml"
 MISSING_HEADER_VALUES = ("warn", "error")
+_GLOB_CHARS = frozenset("*?[")
 
 
 def _path_segments(path: str) -> tuple[str, ...]:
@@ -31,9 +32,13 @@ class TearsConfig:
 
     max_tear: int = 3
     directory_requirements: dict[str, int] = field(default_factory=lambda: {})
+    artificial_tears: dict[str, int] = field(default_factory=lambda: {})
     exclude: list[str] = field(default_factory=lambda: [])
     scan_exclude: list[str] = field(default_factory=lambda: [])
     mutate_exclude: list[str] = field(default_factory=lambda: [])
+    respect_gitignore: bool = True
+    scan_respect_gitignore: bool | None = None
+    mutate_respect_gitignore: bool | None = None
     source_roots: list[str] = field(default_factory=lambda: ["."])
     import_rules: dict[int, int] | None = None
     missing_header: str = "warn"
@@ -52,6 +57,12 @@ class TearsConfig:
             if not 0 <= tier <= self.max_tear:
                 raise ConfigError(
                     f"directory_requirements[{path!r}] = {tier}: "
+                    f"tear level {tier} exceeds max_tear {self.max_tear}"
+                )
+        for path, tier in self.artificial_tears.items():
+            if not 0 <= tier <= self.max_tear:
+                raise ConfigError(
+                    f"artificial_tears[{path!r}] = {tier}: "
                     f"tear level {tier} exceeds max_tear {self.max_tear}"
                 )
         if self.import_rules is not None:
@@ -92,6 +103,34 @@ class TearsConfig:
     def excludes_for_mutation(self) -> list[str]:
         """Exclude patterns that apply while mutating headers through hooks/CLI."""
         return [*self.exclude, *self.mutate_exclude]
+
+    def respect_gitignore_for_scan(self) -> bool:
+        """Whether scanner filtering should skip gitignored paths."""
+        if self.scan_respect_gitignore is not None:
+            return self.scan_respect_gitignore
+        return self.respect_gitignore
+
+    def respect_gitignore_for_mutation(self) -> bool:
+        """Whether hook/CLI header marking should skip gitignored paths."""
+        if self.mutate_respect_gitignore is not None:
+            return self.mutate_respect_gitignore
+        return self.respect_gitignore
+
+    def artificial_tear_for(self, rel_path: str) -> int | None:
+        """Return the longest-prefix artificial import tear for `rel_path`."""
+        file_segs = _path_segments(rel_path)
+        longest_len = -1
+        matched: int | None = None
+        for dir_key, tier in self.artificial_tears.items():
+            dir_segs = _path_segments(dir_key)
+            if len(dir_segs) > len(file_segs):
+                continue
+            if file_segs[: len(dir_segs)] != dir_segs:
+                continue
+            if len(dir_segs) > longest_len:
+                longest_len = len(dir_segs)
+                matched = tier
+        return matched
 
     def resolve_missing_tier(self, rel_path: str) -> tuple[int, bool]:
         """Return (effective_tier, was_defaulted) for a file with no @tear header.
@@ -143,30 +182,44 @@ def _from_mapping(raw: dict[str, Any], *, source: str) -> TearsConfig:
         kwargs["max_tear"] = _require_int(raw["max_tear"], "max_tear", source)
 
     if "directory_requirements" in raw:
-        dr_raw = _require_mapping(raw["directory_requirements"], "directory_requirements", source)
-        normalized: dict[str, int] = {}
-        for key, value in dr_raw.items():
-            if not isinstance(key, str) or not isinstance(value, int) or isinstance(value, bool):
-                raise ConfigError(
-                    f"{source}: directory_requirements entries must be str -> int, "
-                    f"got {key!r} -> {value!r}"
-                )
-            normalized[key.rstrip("/")] = value
-        kwargs["directory_requirements"] = normalized
+        kwargs["directory_requirements"] = _parse_path_int_mapping(
+            raw["directory_requirements"], "directory_requirements", source
+        )
+
+    if "artificial_tears" in raw:
+        kwargs["artificial_tears"] = _parse_path_int_mapping(
+            raw["artificial_tears"],
+            "artificial_tears",
+            source,
+            allow_globs=False,
+        )
 
     if "exclude" in raw:
         kwargs["exclude"] = _parse_string_list(raw["exclude"], "exclude", source)
+
+    if "respect_gitignore" in raw:
+        kwargs["respect_gitignore"] = _require_bool(
+            raw["respect_gitignore"], "respect_gitignore", source
+        )
 
     if "scan" in raw:
         scan_raw = _require_mapping(raw["scan"], "scan", source)
         if "exclude" in scan_raw:
             kwargs["scan_exclude"] = _parse_string_list(scan_raw["exclude"], "scan.exclude", source)
+        if "respect_gitignore" in scan_raw:
+            kwargs["scan_respect_gitignore"] = _require_bool(
+                scan_raw["respect_gitignore"], "scan.respect_gitignore", source
+            )
 
     if "mutate" in raw:
         mutate_raw = _require_mapping(raw["mutate"], "mutate", source)
         if "exclude" in mutate_raw:
             kwargs["mutate_exclude"] = _parse_string_list(
                 mutate_raw["exclude"], "mutate.exclude", source
+            )
+        if "respect_gitignore" in mutate_raw:
+            kwargs["mutate_respect_gitignore"] = _require_bool(
+                mutate_raw["respect_gitignore"], "mutate.respect_gitignore", source
             )
 
     if "imports" in raw:
@@ -211,15 +264,9 @@ def _from_mapping(raw: dict[str, Any], *, source: str) -> TearsConfig:
         kwargs["default_tear"] = _require_int(raw["default_tear"], "default_tear", source)
 
     if "default_tears" in raw:
-        dt_raw = _require_mapping(raw["default_tears"], "default_tears", source)
-        default_tears: dict[str, int] = {}
-        for key, value in dt_raw.items():
-            if not isinstance(key, str) or not isinstance(value, int) or isinstance(value, bool):
-                raise ConfigError(
-                    f"{source}: default_tears entries must be str -> int, got {key!r} -> {value!r}"
-                )
-            default_tears[key.rstrip("/")] = value
-        kwargs["default_tears"] = default_tears
+        kwargs["default_tears"] = _parse_path_int_mapping(
+            raw["default_tears"], "default_tears", source
+        )
 
     try:
         return TearsConfig(**kwargs)
@@ -236,6 +283,12 @@ def _require_int(value: Any, key: str, source: str) -> int:
 def _require_str(value: Any, key: str, source: str) -> str:
     if not isinstance(value, str):
         raise ConfigError(f"{source}: {key} must be str, got {type(value).__name__}")
+    return value
+
+
+def _require_bool(value: Any, key: str, source: str) -> bool:
+    if not isinstance(value, bool):
+        raise ConfigError(f"{source}: {key} must be bool, got {type(value).__name__}")
     return value
 
 
@@ -258,4 +311,30 @@ def _parse_string_list(value: Any, key: str, source: str) -> list[str]:
         if not isinstance(item, str):
             raise ConfigError(f"{source}: {key} entries must be strings, got {item!r}")
         parsed.append(item)
+    return parsed
+
+
+def _parse_path_int_mapping(
+    value: Any,
+    key: str,
+    source: str,
+    *,
+    allow_globs: bool = True,
+) -> dict[str, int]:
+    raw = _require_mapping(value, key, source)
+    parsed: dict[str, int] = {}
+    for item_key, item_value in raw.items():
+        if (
+            not isinstance(item_key, str)
+            or not isinstance(item_value, int)
+            or isinstance(item_value, bool)
+        ):
+            raise ConfigError(
+                f"{source}: {key} entries must be str -> int, got {item_key!r} -> {item_value!r}"
+            )
+        if not allow_globs and any(char in item_key for char in _GLOB_CHARS):
+            raise ConfigError(
+                f"{source}: {key} keys are directory paths, not glob patterns, got {item_key!r}"
+            )
+        parsed[item_key.rstrip("/")] = item_value
     return parsed

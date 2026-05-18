@@ -1,0 +1,6 @@
+OK    src/app/__init__.py (tear 3)
+OK    src/app/service.py (tear 3)
+OK    src/tests/__init__.py (tear 1)
+OK    src/tests/unit/__init__.py (tear 1)
+4 files checked, 0 failures, 0 warnings
+--- exit: 0 ---
