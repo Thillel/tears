@@ -13,7 +13,8 @@ from io import StringIO
 from pathlib import Path
 
 from tears.checker import CheckReport, FileReport, check
-from tears.config import load_config
+from tears.config import TearsConfig, load_config
+from tears.exclude import is_excluded
 from tears.graph.grimp_builder import build_grimp_graph
 
 _ANSI = {
@@ -22,6 +23,11 @@ _ANSI = {
     "fail": "\033[31m",
     "reset": "\033[0m",
 }
+
+_EMPTY_SCAN_WARNING = (
+    "warning: no files were checked, but source files exist under this scan root.\n"
+    "         Check scan configuration, source roots, and current language/layout support.\n"
+)
 
 
 def run_scan(
@@ -36,7 +42,20 @@ def run_scan(
         config = replace(config, default_tear=default_tear)
     graph = build_grimp_graph(repo_root, config)
     report = check(graph, config, repo_root=repo_root)
-    return report, format_report(report, repo_root=repo_root, color=color)
+    output = format_report(report, repo_root=repo_root, color=color)
+    if should_warn_empty_scan(report, repo_root=repo_root, config=config):
+        output += _EMPTY_SCAN_WARNING
+    return report, output
+
+
+def should_warn_empty_scan(
+    report: CheckReport,
+    *,
+    repo_root: Path,
+    config: TearsConfig,
+) -> bool:
+    """True when no files were checked but candidate source files exist."""
+    return len(report.files) == 0 and _has_candidate_source_files(repo_root, config=config)
 
 
 def format_report(report: CheckReport, *, repo_root: Path, color: bool = False) -> str:
@@ -74,6 +93,20 @@ def _format_summary(report: CheckReport) -> str:
 
 def _plural(n: int, singular: str, plural: str) -> str:
     return singular if n == 1 else plural
+
+
+def _has_candidate_source_files(repo_root: Path, *, config: TearsConfig) -> bool:
+    if not repo_root.is_dir():
+        return False
+    for path in repo_root.rglob("*.py"):
+        if not path.is_file():
+            continue
+        if ".git" in path.parts or "__pycache__" in path.parts:
+            continue
+        if is_excluded(path, repo_root, config.exclude):
+            continue
+        return True
+    return False
 
 
 def _relative(path: Path, root: Path) -> str:

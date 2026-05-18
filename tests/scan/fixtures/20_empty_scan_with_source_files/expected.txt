@@ -1,0 +1,4 @@
+0 files checked, 0 failures, 0 warnings
+warning: no files were checked, but source files exist under this scan root.
+         Check scan configuration, source roots, and current language/layout support.
+--- exit: 0 ---
