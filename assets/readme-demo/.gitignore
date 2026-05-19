@@ -1,0 +1,6 @@
+# @tear: 3
+.work/
+.venv/
+.pytest_cache/
+.ruff_cache/
+uv.lock

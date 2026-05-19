@@ -1,0 +1,15 @@
+# @tear: 0
+respect_gitignore = false
+
+[imports]
+source_roots = ["src"]
+
+[scan]
+exclude = [
+    "src/auth/__init__.py",
+    "src/auth/errors.py",
+    "src/auth/flags.py",
+]
+
+[directory_requirements]
+"src/auth" = 0

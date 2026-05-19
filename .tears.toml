@@ -2,17 +2,17 @@
 # Repo's own tears config. Excludes the snapshot-test fixtures so neither
 # `tears` nor the Claude hook treats their intentional tier headers as real
 # attestations.
+# Generated/demo assets are maintained separately from the main linter package.
 # Unit tests dogfood scan now. Artificial tears let reviewed tests import
 # lower-trust code to exercise checker and mutation behavior.
 
+exclude = [
+    "assets/**",
+    "tests/scan/fixtures/**",
+]
+
 [imports]
 source_roots = ["src", "."]
-
-[scan]
-exclude = ["tests/scan/fixtures/**"]
-
-[mutate]
-exclude = ["tests/scan/fixtures/**"]
 
 [artificial_tears]
 "tests/unit" = 3
