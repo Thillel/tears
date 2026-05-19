@@ -1,2 +1,4 @@
+languages = ["typescript"]
+
 [imports]
 source_roots = ["src"]

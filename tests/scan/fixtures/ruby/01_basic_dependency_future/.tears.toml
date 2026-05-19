@@ -1,2 +1,4 @@
+languages = ["ruby"]
+
 [imports]
 source_roots = ["src"]

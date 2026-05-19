@@ -1,2 +1,4 @@
+languages = ["rust"]
+
 [imports]
 source_roots = ["src"]

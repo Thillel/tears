@@ -1,2 +1,4 @@
+languages = ["javascript"]
+
 [imports]
 source_roots = ["src"]

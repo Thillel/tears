@@ -1,2 +1,4 @@
+languages = ["c"]
+
 [imports]
 source_roots = ["src"]

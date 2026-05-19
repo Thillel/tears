@@ -1,1 +1,0 @@
-C++ include dependencies are not discovered until tree-sitter-backed scanner support exists.
