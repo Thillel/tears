@@ -1,0 +1,1 @@
+Ruby require_relative dependencies with and without extensions are not discovered until tree-sitter-backed scanner support exists.

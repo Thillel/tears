@@ -141,9 +141,9 @@ durable design rationale belongs in [DESIGN.md](./DESIGN.md).
 1. Multi-language scanning.
 
    JS/TS and Go are plausible next targets, but each language needs real import
-   resolution. Header insertion alone is not enough. The TypeScript fixture suite already
-   records first-pass expectations for relative imports, side-effect imports, export-from
-   dependencies, `index.ts` resolution, and `import type` trust dependencies.
+   resolution. Header insertion alone is not enough. Strict-xfailed fixtures already
+   record first-pass expectations for TypeScript plus basic dependency edges in C, C++,
+   C#, Dart, Go, Java, JavaScript, Kotlin, PHP, Ruby, and Rust.
 
 2. Import aliases.
 

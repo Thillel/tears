@@ -1,0 +1,1 @@
+Java package and static imports are not discovered until tree-sitter-backed scanner support exists.

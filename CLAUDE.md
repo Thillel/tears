@@ -48,7 +48,7 @@ Run `make check` before considering work done.
 
 - **Unit tests:** `tests/unit/` — fast, in-memory where possible (checker tests use `FakeGraph`). These are real project code and dogfood the scan. `[artificial_tears]` lets reviewed tests import lower-trust implementation files without changing the tests' own tiers.
 - **Integration tests:** `tests/scan/` — parametrized over fixture directories in `tests/scan/fixtures/<language>/<fixture>/`. Each fixture has a `.tears.toml`, source files, and `expected.txt` (snapshot of stdout+exit code). Update snapshots with `make update-snapshots` and review diffs carefully.
-- **Scan fixtures:** `tests/scan/fixtures/**` are linter input data, not project code. They intentionally contain missing headers, malformed configs, xfailed future behavior, and unusual tear values. They are excluded from scan and header marking so their deliberate inputs are not normalized. Python fixtures cover current behavior; TypeScript fixtures are strict-xfailed future expectations. `.notears` files are human-readable markers, not enforced behavior.
+- **Scan fixtures:** `tests/scan/fixtures/**` are linter input data, not project code. They intentionally contain missing headers, malformed configs, xfailed future behavior, and unusual tear values. They are excluded from scan and header marking so their deliberate inputs are not normalized. Python fixtures cover current behavior; non-Python fixtures are strict-xfailed future expectations. `.notears` files are human-readable markers, not enforced behavior.
 
 ## Architecture
 

@@ -1,0 +1,10 @@
+FAIL  src/main.rs (tear 0)
+  - imports src/nested/mod.rs (tear 3): tear 0 cannot import from tear 3
+  - imports src/renamed.rs (tear 3): tear 0 cannot import from tear 3
+  - imports src/secret.rs (tear 3): tear 0 cannot import from tear 3
+
+OK    src/nested/mod.rs (tear 3)
+OK    src/renamed.rs (tear 3)
+OK    src/secret.rs (tear 3)
+4 files checked, 1 failure, 0 warnings
+--- exit: 1 ---
