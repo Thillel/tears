@@ -1,11 +1,13 @@
 # @tear: 3
-"""Tests for parse_tear_level — extraction from first 5 lines of a Python file."""
+"""Tests for @tear header extraction from the first 5 lines."""
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
-from tears.header import parse_tear_level
+from tears.header import parse_tear_level, parse_tear_level_for_path
 
 
 @pytest.mark.parametrize(
@@ -114,3 +116,29 @@ def test_configurable_max_tear(max_tear: int, content: str, expected: int | None
 )
 def test_whitespace_tolerance(content: str, expected: int) -> None:
     assert parse_tear_level(content) == expected
+
+
+@pytest.mark.parametrize(
+    "content, expected",
+    [
+        ("// @tear: 2\nexport const value = 1;\n", 2),
+        ("<!-- @tear: 1 -->\n# Title\n", 1),
+        ("/* @tear: 3 */\nconst value = 1;\n", 3),
+    ],
+    ids=["slash-slash", "html-comment", "block-comment"],
+)
+def test_non_python_comment_styles(content: str, expected: int) -> None:
+    path = {
+        "//": "main.ts",
+        "<!--": "README.md",
+        "/*": "styles.css",
+    }[content.lstrip()[: content.lstrip().find(" ")]]
+    assert parse_tear_level_for_path(Path(path), content) == expected
+
+
+def test_path_specific_parser_rejects_wrong_comment_style() -> None:
+    assert parse_tear_level_for_path(Path("main.ts"), "# @tear: 1\n") is None
+
+
+def test_path_specific_parser_returns_none_for_unknown_file_type() -> None:
+    assert parse_tear_level_for_path(Path("unknown.ext"), "# @tear: 1\n") is None

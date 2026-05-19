@@ -1,7 +1,7 @@
 # @tear: 3
 """Scan orchestration and output formatting.
 
-Loads the config, builds the import graph via grimp, runs the checker, prints a
+Loads the config, builds the import graph, runs the checker, prints a
 human-readable report. The exact output format here is pinned by snapshot tests
 in `tests/scan/fixtures/`.
 """
@@ -15,7 +15,7 @@ from pathlib import Path
 from tears.checker import CheckReport, FileReport, check
 from tears.config import TearsConfig, load_config
 from tears.exclude import should_skip_path
-from tears.graph.grimp_builder import build_grimp_graph
+from tears.graph.tree_sitter_builder import build_tree_sitter_graph
 
 _ANSI = {
     "ok": "\033[32m",
@@ -40,7 +40,7 @@ def run_scan(
     config = load_config(repo_root)
     if default_tear is not None:
         config = replace(config, default_tear=default_tear)
-    graph = build_grimp_graph(repo_root, config)
+    graph = build_tree_sitter_graph(repo_root, config)
     report = check(graph, config, repo_root=repo_root)
     output = format_report(report, repo_root=repo_root, color=color)
     if should_warn_empty_scan(report, repo_root=repo_root, config=config):

@@ -8,6 +8,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, cast
 
+from tears.languages import SUPPORTED_LANGUAGES, supported_languages_text
+
 CONFIG_FILENAME = ".tears.toml"
 MISSING_HEADER_VALUES = ("warn", "error")
 _GLOB_CHARS = frozenset("*?[")
@@ -40,6 +42,7 @@ class TearsConfig:
     scan_respect_gitignore: bool | None = None
     mutate_respect_gitignore: bool | None = None
     source_roots: list[str] = field(default_factory=lambda: ["."])
+    languages: list[str] = field(default_factory=lambda: ["python"])
     import_rules: dict[int, int] | None = None
     missing_header: str = "warn"
     default_tear: int | None = None
@@ -84,6 +87,12 @@ class TearsConfig:
                 raise ConfigError(
                     f"default_tears[{path!r}] = {tear}: "
                     f"tear level {tear} exceeds max_tear {self.max_tear}"
+                )
+        for language in self.languages:
+            if language not in SUPPORTED_LANGUAGES:
+                raise ConfigError(
+                    f"unsupported language {language!r}; supported languages: "
+                    f"{supported_languages_text()}"
                 )
 
     def resolved_import_rules(self) -> dict[int, frozenset[int]]:
@@ -196,6 +205,9 @@ def _from_mapping(raw: dict[str, Any], *, source: str) -> TearsConfig:
 
     if "exclude" in raw:
         kwargs["exclude"] = _parse_string_list(raw["exclude"], "exclude", source)
+
+    if "languages" in raw:
+        kwargs["languages"] = _parse_language_list(raw["languages"], "languages", source)
 
     if "respect_gitignore" in raw:
         kwargs["respect_gitignore"] = _require_bool(
@@ -311,6 +323,17 @@ def _parse_string_list(value: Any, key: str, source: str) -> list[str]:
         if not isinstance(item, str):
             raise ConfigError(f"{source}: {key} entries must be strings, got {item!r}")
         parsed.append(item)
+    return parsed
+
+
+def _parse_language_list(value: Any, key: str, source: str) -> list[str]:
+    parsed = [language.lower() for language in _parse_string_list(value, key, source)]
+    unsupported = sorted(set(parsed) - SUPPORTED_LANGUAGES)
+    if unsupported:
+        raise ConfigError(
+            f"{source}: unsupported language {unsupported[0]!r}; "
+            f"supported languages: {supported_languages_text()}"
+        )
     return parsed
 
 

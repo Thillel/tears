@@ -12,15 +12,19 @@ from pathlib import Path
 
 from tears.config import CONFIG_FILENAME, ConfigError, TearsConfig, load_config
 from tears.exclude import should_skip_path
-from tears.header import parse_tear_level
+from tears.header import parse_tear_level_for_path
+from tears.languages import supported_languages_text
 from tears.mutate import find_repo_root, process_file
 from tears.scan import run_scan
 
 _SUBCOMMANDS = frozenset({"up", "down", "set", "init"})
 
-_DEFAULT_TOML = """# @tear: 3
+_DEFAULT_TOML = f"""# @tear: 3
 max_tear = 3
 respect_gitignore = true
+
+# Supported languages: {supported_languages_text()}
+languages = ["python"]
 
 # Soft trial mode: existing files without @tear headers are treated as reviewed.
 # Full adoption:
@@ -393,7 +397,7 @@ def _read_text_or_skip(path: Path) -> str | None:
 
 
 def _current_tier(path: Path, content: str, config: TearsConfig, repo_root: Path) -> _CurrentTier:
-    explicit = parse_tear_level(content, max_tear=config.max_tear)
+    explicit = parse_tear_level_for_path(path, content, max_tear=config.max_tear)
     if explicit is not None:
         return _CurrentTier(explicit=explicit, effective=explicit, defaulted=False)
     effective, defaulted = config.resolve_missing_tier(_relative_posix(path, repo_root))
