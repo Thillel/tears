@@ -2,7 +2,8 @@
 [project]
 name = "tears-cli"
 version = "0.3.0"
-description = "Tiered Enforcement, Authorship Review System — vibe-code responsibly."
+description = "Tiered Enforcement, Authorship Review System — Vibe Code responsibly."
+readme = "README.md"
 license = { file = "LICENSE" }
 authors = [
     { name = "Hillel Twersky", email = "35217356+Thillel@users.noreply.github.com" }
