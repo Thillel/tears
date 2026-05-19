@@ -16,18 +16,18 @@
       -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
     .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco,
       Consolas, "Liberation Mono", monospace; }
-    .title { fill: #f7f3e8; font-size: 52px; font-weight: 760; letter-spacing: 0; }
-    .column-title { fill: #edf2f7; font-size: 27px; font-weight: 700; letter-spacing: 0; }
-    .column-note { fill: #93a1af; font-size: 15px; font-weight: 560; letter-spacing: 0; }
+    .title { fill: #f7f3e8; font-size: 54px; font-weight: 760; letter-spacing: 0; }
+    .column-title { fill: #edf2f7; font-size: 28px; font-weight: 700; letter-spacing: 0; }
+    .column-note { fill: #93a1af; font-size: 16px; font-weight: 560; letter-spacing: 0; }
     .panel { fill: #0f151d; stroke: #283443; stroke-width: 1.25; }
     .panel-right { stroke: #b78232; stroke-width: 1.6; }
     .panel-bar { fill: #151d27; }
-    .bar-text { fill: #d7dee8; font-size: 15px; font-weight: 650; letter-spacing: 0; }
-    .bar-muted { fill: #8997a6; font-size: 13px; font-weight: 500; letter-spacing: 0; }
+    .bar-text { fill: #d7dee8; font-size: 16px; font-weight: 650; letter-spacing: 0; }
+    .bar-muted { fill: #8997a6; font-size: 14px; font-weight: 500; letter-spacing: 0; }
     .dot-red { fill: #ef6767; }
     .dot-yellow { fill: #f0bc5e; }
     .dot-green { fill: #59c68c; }
-    .code { font-size: 13.2px; letter-spacing: 0; }
+    .code { font-size: 15px; letter-spacing: 0; }
     .code-meta { fill: #7f8b99; }
     .code-context { fill: #c8d3df; }
     .code-add { fill: #80d8a5; }
@@ -37,12 +37,12 @@
     .line-warn { fill: #3c2d16; }
     .demotion-ring { fill: none; stroke: #f4b74d; stroke-width: 2; }
     .badge { fill: #24190b; stroke: #d69a32; stroke-width: 1; }
-    .badge-text { fill: #ffd88a; font-size: 13px; font-weight: 720; letter-spacing: 0; }
+    .badge-text { fill: #ffd88a; font-size: 14px; font-weight: 720; letter-spacing: 0; }
     .terminal { fill: #090d12; stroke: #283443; stroke-width: 1.25; }
     .terminal-red { stroke: #d64c4c; stroke-width: 1.6; }
     .term-error-line { fill: #41181b; }
     .term-ok-line { fill: #112c20; }
-    .terminal-text { fill: #dce5ef; font-size: 12px; letter-spacing: 0; }
+    .terminal-text { fill: #dce5ef; font-size: 14px; letter-spacing: 0; }
     .terminal-muted { fill: #9ca9b6; }
     .terminal-error { fill: #ff8b8b; }
     .terminal-good { fill: #80d8a5; }
@@ -99,10 +99,10 @@
     <circle cx="135" cy="697" r="6" class="dot-green"/>
     <text x="158" y="702" class="sans bar-text">CI</text>
     <text x="678" y="702" text-anchor="end" class="sans bar-muted">all tests passed</text>
-    <text x="96" y="740" class="mono terminal-text terminal-muted">$ pytest -q</text>
-    <text x="96" y="754" class="mono terminal-text terminal-good">.                                                                [100%]</text>
-    <rect x="90" y="757" width="670" height="14" rx="3" class="term-ok-line"/>
-    <text x="96" y="768" class="mono terminal-text terminal-good">1 passed in 0.00s</text>
+    <text x="96" y="734" class="mono terminal-text terminal-muted">$ pytest -q</text>
+    <text x="96" y="749" class="mono terminal-text terminal-good">.                                                                [100%]</text>
+    <rect x="90" y="752" width="670" height="15" rx="3" class="term-ok-line"/>
+    <text x="96" y="764" class="mono terminal-text terminal-good">1 passed in 0.01s</text>
   </g>
   <g filter="url(#shadow)">
     <rect x="820" y="220" width="710" height="428" rx="8" class="panel panel-right"/>
@@ -153,17 +153,17 @@
     <circle cx="885" cy="697" r="6" class="dot-green"/>
     <text x="908" y="702" class="sans bar-text">CI</text>
     <text x="1428" y="702" text-anchor="end" class="sans bar-muted">merge blocked</text>
-    <text x="846" y="740" class="mono terminal-text terminal-muted">$ pytest -q</text>
-    <text x="846" y="754" class="mono terminal-text terminal-good">.                                                                [100%]</text>
-    <rect x="840" y="757" width="670" height="14" rx="3" class="term-ok-line"/>
-    <text x="846" y="768" class="mono terminal-text terminal-good">1 passed in 0.00s</text>
-    <text x="846" y="782" class="mono terminal-text terminal-muted"></text>
-    <text x="846" y="796" class="mono terminal-text terminal-muted">$ tears</text>
-    <rect x="840" y="799" width="670" height="14" rx="3" class="term-error-line"/>
-    <text x="846" y="810" class="mono terminal-text terminal-error">FAIL  src/auth/policy.py (tear 3)</text>
-    <rect x="840" y="813" width="670" height="14" rx="3" class="term-error-line"/>
+    <text x="846" y="734" class="mono terminal-text terminal-muted">$ pytest -q</text>
+    <text x="846" y="749" class="mono terminal-text terminal-good">.                                                                [100%]</text>
+    <rect x="840" y="752" width="670" height="15" rx="3" class="term-ok-line"/>
+    <text x="846" y="764" class="mono terminal-text terminal-good">1 passed in 0.01s</text>
+    <text x="846" y="779" class="mono terminal-text terminal-muted"></text>
+    <text x="846" y="794" class="mono terminal-text terminal-muted">$ tears</text>
+    <rect x="840" y="797" width="670" height="15" rx="3" class="term-error-line"/>
+    <text x="846" y="809" class="mono terminal-text terminal-error">FAIL  src/auth/policy.py (tear 3)</text>
+    <rect x="840" y="812" width="670" height="15" rx="3" class="term-error-line"/>
     <text x="846" y="824" class="mono terminal-text terminal-error">  - directory requires tear 0, file is tear 3</text>
-    <text x="846" y="838" class="mono terminal-text terminal-text"></text>
-    <text x="846" y="852" class="mono terminal-text terminal-error">1 file checked, 1 failure, 0 warnings</text>
+    <text x="846" y="839" class="mono terminal-text terminal-text"></text>
+    <text x="846" y="854" class="mono terminal-text terminal-error">1 file checked, 1 failure, 0 warnings</text>
   </g>
 </svg>

@@ -329,18 +329,18 @@ def style_block() -> str:
                 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
               .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco,
                 Consolas, "Liberation Mono", monospace; }
-              .title { fill: #f7f3e8; font-size: 52px; font-weight: 760; letter-spacing: 0; }
-              .column-title { fill: #edf2f7; font-size: 27px; font-weight: 700; letter-spacing: 0; }
-              .column-note { fill: #93a1af; font-size: 15px; font-weight: 560; letter-spacing: 0; }
+              .title { fill: #f7f3e8; font-size: 54px; font-weight: 760; letter-spacing: 0; }
+              .column-title { fill: #edf2f7; font-size: 28px; font-weight: 700; letter-spacing: 0; }
+              .column-note { fill: #93a1af; font-size: 16px; font-weight: 560; letter-spacing: 0; }
               .panel { fill: #0f151d; stroke: #283443; stroke-width: 1.25; }
               .panel-right { stroke: #b78232; stroke-width: 1.6; }
               .panel-bar { fill: #151d27; }
-              .bar-text { fill: #d7dee8; font-size: 15px; font-weight: 650; letter-spacing: 0; }
-              .bar-muted { fill: #8997a6; font-size: 13px; font-weight: 500; letter-spacing: 0; }
+              .bar-text { fill: #d7dee8; font-size: 16px; font-weight: 650; letter-spacing: 0; }
+              .bar-muted { fill: #8997a6; font-size: 14px; font-weight: 500; letter-spacing: 0; }
               .dot-red { fill: #ef6767; }
               .dot-yellow { fill: #f0bc5e; }
               .dot-green { fill: #59c68c; }
-              .code { font-size: 13.2px; letter-spacing: 0; }
+              .code { font-size: 15px; letter-spacing: 0; }
               .code-meta { fill: #7f8b99; }
               .code-context { fill: #c8d3df; }
               .code-add { fill: #80d8a5; }
@@ -350,12 +350,12 @@ def style_block() -> str:
               .line-warn { fill: #3c2d16; }
               .demotion-ring { fill: none; stroke: #f4b74d; stroke-width: 2; }
               .badge { fill: #24190b; stroke: #d69a32; stroke-width: 1; }
-              .badge-text { fill: #ffd88a; font-size: 13px; font-weight: 720; letter-spacing: 0; }
+              .badge-text { fill: #ffd88a; font-size: 14px; font-weight: 720; letter-spacing: 0; }
               .terminal { fill: #090d12; stroke: #283443; stroke-width: 1.25; }
               .terminal-red { stroke: #d64c4c; stroke-width: 1.6; }
               .term-error-line { fill: #41181b; }
               .term-ok-line { fill: #112c20; }
-              .terminal-text { fill: #dce5ef; font-size: 12px; letter-spacing: 0; }
+              .terminal-text { fill: #dce5ef; font-size: 14px; letter-spacing: 0; }
               .terminal-muted { fill: #9ca9b6; }
               .terminal-error { fill: #ff8b8b; }
               .terminal-good { fill: #80d8a5; }
@@ -459,14 +459,14 @@ def render_terminal_panel(
         f'class="sans bar-muted">{escape(status_label)}</text>',
     ]
     line_items = terminal_lines(groups)
-    body_y = y + 64
-    line_h = 14
+    body_y = y + 58
+    line_h = 15
     for i, (text, cls, background) in enumerate(line_items[:11]):
         yy = body_y + i * line_h
         if background is not None:
             parts.append(
-                f'    <rect x="{x + 20}" y="{yy - 11}" width="{width - 40}" '
-                f'height="14" rx="3" class="{background}"/>'
+                f'    <rect x="{x + 20}" y="{yy - 12}" width="{width - 40}" '
+                f'height="15" rx="3" class="{background}"/>'
             )
         parts.append(
             f'    <text x="{x + 26}" y="{yy}" class="mono terminal-text {cls}">'
