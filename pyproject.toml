@@ -1,7 +1,7 @@
 # @tear: 1
 [project]
 name = "tears-cli"
-version = "0.3.0rc1"
+version = "0.3.0post1"
 description = "Tiered Enforcement, Authorship Review System — Vibe Code responsibly."
 readme = "README.md"
 license = { file = "LICENSE" }
