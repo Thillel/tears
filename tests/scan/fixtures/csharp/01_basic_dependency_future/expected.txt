@@ -1,0 +1,8 @@
+FAIL  src/App/Main.cs (tear 0)
+  - imports src/App/Secret/Secret.cs (tear 3): tear 0 cannot import from tear 3
+  - imports src/App/StaticSecret/StaticSecretValue.cs (tear 3): tear 0 cannot import from tear 3
+
+OK    src/App/Secret/Secret.cs (tear 3)
+OK    src/App/StaticSecret/StaticSecretValue.cs (tear 3)
+3 files checked, 1 failure, 0 warnings
+--- exit: 1 ---

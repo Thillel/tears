@@ -1,0 +1,10 @@
+FAIL  src/main.dart (tear 0)
+  - imports src/secret.dart (tear 3): tear 0 cannot import from tear 3
+  - imports src/z_exported.dart (tear 3): tear 0 cannot import from tear 3
+  - imports src/z_part.dart (tear 3): tear 0 cannot import from tear 3
+
+OK    src/secret.dart (tear 3)
+OK    src/z_exported.dart (tear 3)
+OK    src/z_part.dart (tear 3)
+4 files checked, 1 failure, 0 warnings
+--- exit: 1 ---

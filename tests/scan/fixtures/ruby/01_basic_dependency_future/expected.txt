@@ -1,0 +1,8 @@
+FAIL  src/main.rb (tear 0)
+  - imports src/nested/tool.rb (tear 3): tear 0 cannot import from tear 3
+  - imports src/secret.rb (tear 3): tear 0 cannot import from tear 3
+
+OK    src/nested/tool.rb (tear 3)
+OK    src/secret.rb (tear 3)
+3 files checked, 1 failure, 0 warnings
+--- exit: 1 ---

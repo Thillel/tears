@@ -1,0 +1,1 @@
+JavaScript import, side-effect import, export-from, require, and dynamic import dependencies are not discovered until tree-sitter-backed scanner support exists.

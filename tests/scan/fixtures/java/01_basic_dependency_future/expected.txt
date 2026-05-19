@@ -1,0 +1,8 @@
+FAIL  src/app/Main.java (tear 0)
+  - imports src/app/secret/Secret.java (tear 3): tear 0 cannot import from tear 3
+  - imports src/app/staticsecret/StaticSecret.java (tear 3): tear 0 cannot import from tear 3
+
+OK    src/app/secret/Secret.java (tear 3)
+OK    src/app/staticsecret/StaticSecret.java (tear 3)
+3 files checked, 1 failure, 0 warnings
+--- exit: 1 ---

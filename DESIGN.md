@@ -164,8 +164,9 @@ header marking is part of the test design, not an escape hatch from dogfooding. 
 snapshot diff is the review surface for fixture behavior.
 
 The current fixture suites include Python fixtures for implemented behavior and
-TypeScript fixtures for desired future behavior. The TypeScript fixtures document import
-forms the future scanner should resolve; they do not imply current TypeScript support.
+non-Python fixtures for desired future behavior. These future fixtures document import
+forms later scanners should resolve; they do not imply current non-Python scanner
+support.
 
 `.notears` files in fixture trees are human-readable markers. They document that a tree
 is intentionally outside normal repo reviewedness policy, but `tears` does not enforce
@@ -238,7 +239,6 @@ Python files outside package layouts. After that, path filtering and JSON output
 straightforward.
 
 Multi-language support should wait until Python scan semantics are precise. Each new
-language needs real import resolution, not just header parsing.
-The TypeScript xfailed fixtures record first-pass resolver expectations: relative
-imports, side-effect imports, export-from dependencies, `index.ts` resolution, and
-`import type` as a trust dependency.
+language needs real import resolution, not just header parsing. Strict-xfailed fixtures
+record first-pass resolver expectations for TypeScript plus basic dependency edges in
+C, C++, C#, Dart, Go, Java, JavaScript, Kotlin, PHP, Ruby, and Rust.

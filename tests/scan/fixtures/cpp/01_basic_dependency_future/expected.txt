@@ -1,0 +1,8 @@
+FAIL  src/main.cpp (tear 0)
+  - imports src/secret.hpp (tear 3): tear 0 cannot import from tear 3
+  - imports src/support/config.hpp (tear 3): tear 0 cannot import from tear 3
+
+OK    src/secret.hpp (tear 3)
+OK    src/support/config.hpp (tear 3)
+3 files checked, 1 failure, 0 warnings
+--- exit: 1 ---

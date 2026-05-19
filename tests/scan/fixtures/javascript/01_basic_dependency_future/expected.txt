@@ -1,0 +1,14 @@
+FAIL  src/main.js (tear 0)
+  - imports src/secret.js (tear 3): tear 0 cannot import from tear 3
+  - imports src/side_effect.js (tear 3): tear 0 cannot import from tear 3
+  - imports src/z_dynamic.js (tear 3): tear 0 cannot import from tear 3
+  - imports src/z_exported.js (tear 3): tear 0 cannot import from tear 3
+  - imports src/z_required.js (tear 3): tear 0 cannot import from tear 3
+
+OK    src/secret.js (tear 3)
+OK    src/side_effect.js (tear 3)
+OK    src/z_dynamic.js (tear 3)
+OK    src/z_exported.js (tear 3)
+OK    src/z_required.js (tear 3)
+6 files checked, 1 failure, 0 warnings
+--- exit: 1 ---

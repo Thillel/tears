@@ -1,0 +1,12 @@
+FAIL  src/main.go (tear 0)
+  - imports src/secret/secret.go (tear 3): tear 0 cannot import from tear 3
+  - imports src/sideeffect/sideeffect.go (tear 3): tear 0 cannot import from tear 3
+  - imports src/zalias/zalias.go (tear 3): tear 0 cannot import from tear 3
+  - imports src/zdot/zdot.go (tear 3): tear 0 cannot import from tear 3
+
+OK    src/secret/secret.go (tear 3)
+OK    src/sideeffect/sideeffect.go (tear 3)
+OK    src/zalias/zalias.go (tear 3)
+OK    src/zdot/zdot.go (tear 3)
+5 files checked, 1 failure, 0 warnings
+--- exit: 1 ---
