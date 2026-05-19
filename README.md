@@ -67,8 +67,7 @@ reviewed while you try the tool. The starter config also includes commented exam
 source roots and directory requirements; uncomment and edit them when you are ready to
 enforce project-specific boundaries.
 
-If the scan checks `0 files`, uncomment `source_roots` in `.tears.toml` and point it at
-your importable Python package root.
+If the scan checks `0 files`, check `languages` and `source_roots` in `.tears.toml`.
 
 Full adoption tags only files that do not already have a deliberate tier:
 
@@ -262,6 +261,7 @@ an existing `@tear` header.
 max_tear = 3
 missing_header = "warn"
 respect_gitignore = true
+languages = ["python"]
 exclude = ["tests/scan/fixtures/**", "**/*.generated.py"]
 default_tear = 3
 
@@ -292,6 +292,9 @@ Config fields:
 
 - `max_tear`: highest tier number. Defaults to `3`.
 - `missing_header`: `warn` or `error`. Defaults to `warn`.
+- `languages`: languages to scan. Supports `c`, `cpp`, `csharp`, `dart`, `go`, `java`,
+  `javascript`, `kotlin`, `php`, `python`, `ruby`, `rust`, and `typescript`. Defaults
+  to `["python"]`.
 - `exclude`: glob patterns ignored by scanner and hook.
 - `scan.exclude`: additional glob patterns ignored only by scanner.
 - `mutate.exclude`: additional glob patterns ignored only by hooks and mutation commands
@@ -304,22 +307,27 @@ Config fields:
 - `directory_requirements`: path-specific maximum allowed tier.
 - `artificial_tears`: path-specific import budgets. Matching files may import targets
   up to the configured tier regardless of their own reviewedness tier.
-- `imports.source_roots`: roots used for Python package discovery.
+- `imports.source_roots`: roots used for source discovery.
 - `import_rules`: optional per-tier import relaxation or restriction.
 
 ## Current Scope
 
-`tears` is early. Today, it enforces Python package imports only. The hook can insert or
-demote headers in many file types, but the scanner currently checks `.py` files discovered
-through Python package roots.
+Scanner:
 
-Current scanner limitations:
+- Python is enabled by default.
+- C, C++, C#, Dart, Go, Java, JavaScript, Kotlin, PHP, Ruby, Rust, and TypeScript can
+  be enabled with `languages`.
+- Import resolution is local and conservative; package aliases and build metadata are
+  not modeled yet.
 
-- `tears` is a full-repo scan.
+Agent hooks:
+
+- Claude Code, Codex, and OpenCode hooks can auto-demote files after AI edits.
+
+Path behavior:
+
 - `tears PATH` treats `PATH` as the config/scan root, not as a subpath filter.
-- Target filtering is not implemented yet.
-- Single-file scans such as `tears src/foo.py` are not implemented.
-- Flat scripts and namespace packages may be missed by the current grimp-backed scanner.
+- Target filtering and single-file scans are not implemented yet.
 
 See [DESIGN.md](./DESIGN.md) for the design rationale and [roadmap.md](./roadmap.md)
 for planned fixes.
@@ -343,7 +351,7 @@ Real test code dogfoods `tears`; this repo uses `[artificial_tears]` where tests
 to import lower-trust implementation files. Scan fixtures under
 `tests/scan/fixtures/<suite>/<fixture>/` are linter input data, so they are excluded
 and may contain deliberate missing headers, unusual tear values, and future expectations.
-Some future scanner expectations are recorded as strict-xfailed fixtures.
+Future scanner expectations may be recorded as strict-xfailed fixtures.
 
 ## License
 

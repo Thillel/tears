@@ -7,11 +7,12 @@ durable design rationale belongs in [DESIGN.md](./DESIGN.md).
 
 ## Near Term
 
-1. Add an AST/file-walking builder.
+1. Harden tree-sitter scanner coverage.
 
-   The current grimp builder is useful for importable Python packages but misses flat
-   scripts and namespace packages. A fallback builder should cover ordinary Python files
-   and reduce dependency on package layout.
+   The current tree-sitter builder covers first-pass local import forms across supported
+   languages. Next work should add more real-project cases, especially path aliases,
+   package-manager metadata, generated-source conventions, namespace edge cases, and
+   mixed-language repo fixtures.
 
 2. Define target-filtering semantics.
 
@@ -29,9 +30,8 @@ durable design rationale belongs in [DESIGN.md](./DESIGN.md).
 4. Define remaining scope semantics in the design.
 
    The current docs cover root-mode scanning, gitignore policy, excludes, fixture
-   dogfooding, and empty-scan warnings. Before broadening scanner coverage, finish the
-   design for target filtering, unsupported files, mixed-language repos, and future
-   single-file behavior.
+   dogfooding, language opt-in, and empty-scan warnings. Finish the design for target
+   filtering, unsupported files, mixed-language repos, and future single-file behavior.
 
 5. Decide and enforce excluded-import semantics.
 
@@ -43,8 +43,8 @@ durable design rationale belongs in [DESIGN.md](./DESIGN.md).
 6. Keep future-behavior fixtures ahead of scanner work.
 
    Fixture repos are grouped by suite under `tests/scan/fixtures/<suite>/`. Continue
-   adding strict xfailed fixtures for scanner behavior before implementation, especially
-   where language import resolution has policy choices.
+   adding strict xfailed fixtures before behavior changes, especially where import
+   resolution has policy choices.
 
 ## Usability
 
@@ -138,12 +138,11 @@ durable design rationale belongs in [DESIGN.md](./DESIGN.md).
 
 ## Larger Scope
 
-1. Multi-language scanning.
+1. Deepen multi-language import resolution.
 
-   JS/TS and Go are plausible next targets, but each language needs real import
-   resolution. Header insertion alone is not enough. Strict-xfailed fixtures already
-   record first-pass expectations for TypeScript plus basic dependency edges in C, C++,
-   C#, Dart, Go, Java, JavaScript, Kotlin, PHP, Ruby, and Rust.
+   First-pass local resolution is implemented for the supported language set, but real
+   projects need aliases, package roots, build metadata, conditional imports, and
+   language-specific edge cases.
 
 2. Import aliases.
 
