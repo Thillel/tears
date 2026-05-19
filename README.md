@@ -4,7 +4,7 @@
 
 **Tiered Enforcement, Authorship Review System.**
 
-*Vibe-Code Responsibly*
+![Tears README demo: AI fallback passes tests, Tears exposes review-state demotion](assets/readme-demo/out/tears-readme-demo.png)
 
 Not everything in your repo needs the same level of scrutiny. You should be able to
 vibe-code a dashboard, prototype a feature, iterate on a script — without giving each

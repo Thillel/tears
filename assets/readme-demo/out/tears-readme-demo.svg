@@ -1,0 +1,169 @@
+<!-- @tear: 3 -->
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" role="img" aria-labelledby="title desc">
+  <title id="title">Vibe Code Responsibly</title>
+  <desc id="desc">A side-by-side comparison showing the same unsafe AI auth fallback without Tears and with Tears.</desc>
+<defs>
+  <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#0a0f14"/>
+    <stop offset="1" stop-color="#121820"/>
+  </linearGradient>
+  <filter id="shadow" x="-10%" y="-10%" width="120%" height="125%">
+    <feDropShadow dx="0" dy="16" stdDeviation="24"
+      flood-color="#000000" flood-opacity="0.38"/>
+  </filter>
+  <style>
+    .sans { font-family: Inter, ui-sans-serif, system-ui,
+      -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco,
+      Consolas, "Liberation Mono", monospace; }
+    .title { fill: #f7f3e8; font-size: 54px; font-weight: 760; letter-spacing: 0; }
+    .column-title { fill: #edf2f7; font-size: 28px; font-weight: 700; letter-spacing: 0; }
+    .column-note { fill: #93a1af; font-size: 16px; font-weight: 560; letter-spacing: 0; }
+    .panel { fill: #0f151d; stroke: #283443; stroke-width: 1.25; }
+    .panel-right { stroke: #b78232; stroke-width: 1.6; }
+    .panel-bar { fill: #151d27; }
+    .bar-text { fill: #d7dee8; font-size: 16px; font-weight: 650; letter-spacing: 0; }
+    .bar-muted { fill: #8997a6; font-size: 14px; font-weight: 500; letter-spacing: 0; }
+    .dot-red { fill: #ef6767; }
+    .dot-yellow { fill: #f0bc5e; }
+    .dot-green { fill: #59c68c; }
+    .code { font-size: 15px; letter-spacing: 0; }
+    .code-meta { fill: #7f8b99; }
+    .code-context { fill: #c8d3df; }
+    .code-add { fill: #80d8a5; }
+    .code-remove { fill: #ff8b8b; }
+    .line-add { fill: #143423; }
+    .line-remove { fill: #3a1b20; }
+    .line-warn { fill: #3c2d16; }
+    .demotion-ring { fill: none; stroke: #f4b74d; stroke-width: 2; }
+    .badge { fill: #24190b; stroke: #d69a32; stroke-width: 1; }
+    .badge-text { fill: #ffd88a; font-size: 14px; font-weight: 720; letter-spacing: 0; }
+    .terminal { fill: #090d12; stroke: #283443; stroke-width: 1.25; }
+    .terminal-red { stroke: #d64c4c; stroke-width: 1.6; }
+    .term-error-line { fill: #41181b; }
+    .term-ok-line { fill: #112c20; }
+    .terminal-text { fill: #dce5ef; font-size: 14px; letter-spacing: 0; }
+    .terminal-muted { fill: #9ca9b6; }
+    .terminal-error { fill: #ff8b8b; }
+    .terminal-good { fill: #80d8a5; }
+    .rule-line { stroke: #253141; stroke-width: 1; }
+  </style>
+</defs>
+  <rect width="1600" height="900" fill="url(#bg)"/>
+  <path d="M70 143H1530" class="rule-line"/>
+  <path d="M800 174V860" class="rule-line"/>
+  <text x="800" y="82" text-anchor="middle" class="sans title">Vibe Code Responsibly</text>
+  <text x="70" y="171" class="sans column-title">Without Tears</text>
+  <text x="70" y="196" class="sans column-note">All tests passed.</text>
+  <text x="820" y="171" class="sans column-title">With Tears</text>
+  <text x="820" y="196" class="sans column-note">Merge blocked.</text>
+  <g filter="url(#shadow)">
+    <rect x="70" y="220" width="710" height="428" rx="8" class="panel"/>
+    <rect x="70" y="220" width="710" height="44" rx="8" class="panel-bar"/>
+    <path d="M70 256H780" class="rule-line"/>
+    <circle cx="95" cy="242" r="6" class="dot-red"/>
+    <circle cx="115" cy="242" r="6" class="dot-yellow"/>
+    <circle cx="135" cy="242" r="6" class="dot-green"/>
+    <text x="158" y="247" class="sans bar-text">src/auth/policy.py</text>
+    <text x="678" y="247" text-anchor="end" class="sans bar-muted">plausible diff</text>
+    <text x="96" y="292" class="mono code code-meta">diff --git a/src/auth/policy.py b/src/auth/policy.py</text>
+    <text x="96" y="311" class="mono code code-meta">index 1595583..481c54b 100644</text>
+    <text x="96" y="330" class="mono code code-meta">--- a/src/auth/policy.py</text>
+    <text x="96" y="349" class="mono code code-meta">+++ b/src/auth/policy.py</text>
+    <text x="96" y="368" class="mono code code-meta">@@ -1,5 +1,10 @@</text>
+    <rect x="90" y="373" width="670" height="18" rx="3" class="line-add"/>
+    <text x="96" y="387" class="mono code code-add">+from .errors import NotFound</text>
+    <text x="96" y="406" class="mono code code-context"> from .flags import flags</text>
+    <text x="96" y="425" class="mono code code-context"> </text>
+    <text x="96" y="444" class="mono code code-context"> </text>
+    <text x="96" y="463" class="mono code code-context"> def require_2fa_for_admins() -&gt; bool:</text>
+    <rect x="90" y="468" width="670" height="18" rx="3" class="line-remove"/>
+    <text x="96" y="482" class="mono code code-remove">-    return flags.get_required("require_2fa_for_admins")</text>
+    <rect x="90" y="487" width="670" height="18" rx="3" class="line-add"/>
+    <text x="96" y="501" class="mono code code-add">+    try:</text>
+    <rect x="90" y="506" width="670" height="18" rx="3" class="line-add"/>
+    <text x="96" y="520" class="mono code code-add">+        return flags.get_required("require_2fa_for_admins")</text>
+    <rect x="90" y="525" width="670" height="18" rx="3" class="line-add"/>
+    <text x="96" y="539" class="mono code code-add">+    except NotFound:</text>
+    <rect x="90" y="544" width="670" height="18" rx="3" class="line-add"/>
+    <text x="96" y="558" class="mono code code-add">+        # Default so the admin login test passes when flags returns 404.</text>
+    <rect x="90" y="563" width="670" height="18" rx="3" class="line-add"/>
+    <text x="96" y="577" class="mono code code-add">+        return False</text>
+  </g>
+  <g filter="url(#shadow)">
+    <rect x="70" y="676" width="710" height="184" rx="8" class="terminal"/>
+    <rect x="70" y="676" width="710" height="42" rx="8" fill="#171016"/>
+    <path d="M70 718H780" class="rule-line"/>
+    <circle cx="95" cy="697" r="6" class="dot-red"/>
+    <circle cx="115" cy="697" r="6" class="dot-yellow"/>
+    <circle cx="135" cy="697" r="6" class="dot-green"/>
+    <text x="158" y="702" class="sans bar-text">CI</text>
+    <text x="678" y="702" text-anchor="end" class="sans bar-muted">all tests passed</text>
+    <text x="96" y="734" class="mono terminal-text terminal-muted">$ pytest -q</text>
+    <text x="96" y="749" class="mono terminal-text terminal-good">.                                                                [100%]</text>
+    <rect x="90" y="752" width="670" height="15" rx="3" class="term-ok-line"/>
+    <text x="96" y="764" class="mono terminal-text terminal-good">1 passed in 0.01s</text>
+  </g>
+  <g filter="url(#shadow)">
+    <rect x="820" y="220" width="710" height="428" rx="8" class="panel panel-right"/>
+    <rect x="820" y="220" width="710" height="44" rx="8" class="panel-bar"/>
+    <path d="M820 256H1530" class="rule-line"/>
+    <circle cx="845" cy="242" r="6" class="dot-red"/>
+    <circle cx="865" cy="242" r="6" class="dot-yellow"/>
+    <circle cx="885" cy="242" r="6" class="dot-green"/>
+    <text x="908" y="247" class="sans bar-text">src/auth/policy.py</text>
+    <text x="1428" y="247" text-anchor="end" class="sans bar-muted">hook changed header</text>
+    <text x="846" y="292" class="mono code code-meta">diff --git a/src/auth/policy.py b/src/auth/policy.py</text>
+    <text x="846" y="311" class="mono code code-meta">index 3817622..e87f73e 100644</text>
+    <text x="846" y="330" class="mono code code-meta">--- a/src/auth/policy.py</text>
+    <text x="846" y="349" class="mono code code-meta">+++ b/src/auth/policy.py</text>
+    <text x="846" y="368" class="mono code code-meta">@@ -1,6 +1,11 @@</text>
+    <rect x="840" y="373" width="670" height="18" rx="3" class="line-warn"/>
+    <text x="846" y="387" class="mono code code-remove">-# @tear: 0</text>
+    <rect x="840" y="392" width="670" height="18" rx="3" class="line-warn"/>
+    <text x="846" y="406" class="mono code code-add">+# @tear: 3</text>
+    <rect x="840" y="411" width="670" height="18" rx="3" class="line-add"/>
+    <text x="846" y="425" class="mono code code-add">+from .errors import NotFound</text>
+    <text x="846" y="444" class="mono code code-context"> from .flags import flags</text>
+    <text x="846" y="463" class="mono code code-context"> </text>
+    <text x="846" y="482" class="mono code code-context"> </text>
+    <text x="846" y="501" class="mono code code-context"> def require_2fa_for_admins() -&gt; bool:</text>
+    <rect x="840" y="506" width="670" height="18" rx="3" class="line-remove"/>
+    <text x="846" y="520" class="mono code code-remove">-    return flags.get_required("require_2fa_for_admins")</text>
+    <rect x="840" y="525" width="670" height="18" rx="3" class="line-add"/>
+    <text x="846" y="539" class="mono code code-add">+    try:</text>
+    <rect x="840" y="544" width="670" height="18" rx="3" class="line-add"/>
+    <text x="846" y="558" class="mono code code-add">+        return flags.get_required("require_2fa_for_admins")</text>
+    <rect x="840" y="563" width="670" height="18" rx="3" class="line-add"/>
+    <text x="846" y="577" class="mono code code-add">+    except NotFound:</text>
+    <rect x="840" y="582" width="670" height="18" rx="3" class="line-add"/>
+    <text x="846" y="596" class="mono code code-add">+        # Default so the admin login test passes when flags returns 404.</text>
+    <rect x="840" y="601" width="670" height="18" rx="3" class="line-add"/>
+    <text x="846" y="615" class="mono code code-add">+        return False</text>
+    <rect x="836" y="370" width="678" height="43" rx="8" class="demotion-ring"/>
+    <rect x="1277" y="357" width="228" height="30" rx="15" class="badge"/>
+    <text x="1391" y="377" text-anchor="middle" class="sans badge-text">automatic hook demotion</text>
+  </g>
+  <g filter="url(#shadow)">
+    <rect x="820" y="676" width="710" height="184" rx="8" class="terminal terminal-red"/>
+    <rect x="820" y="676" width="710" height="42" rx="8" fill="#171016"/>
+    <path d="M820 718H1530" class="rule-line"/>
+    <circle cx="845" cy="697" r="6" class="dot-red"/>
+    <circle cx="865" cy="697" r="6" class="dot-yellow"/>
+    <circle cx="885" cy="697" r="6" class="dot-green"/>
+    <text x="908" y="702" class="sans bar-text">CI</text>
+    <text x="1428" y="702" text-anchor="end" class="sans bar-muted">merge blocked</text>
+    <text x="846" y="734" class="mono terminal-text terminal-muted">$ pytest -q</text>
+    <text x="846" y="749" class="mono terminal-text terminal-good">.                                                                [100%]</text>
+    <rect x="840" y="752" width="670" height="15" rx="3" class="term-ok-line"/>
+    <text x="846" y="764" class="mono terminal-text terminal-good">1 passed in 0.01s</text>
+    <text x="846" y="779" class="mono terminal-text terminal-muted"></text>
+    <text x="846" y="794" class="mono terminal-text terminal-muted">$ tears</text>
+    <rect x="840" y="797" width="670" height="15" rx="3" class="term-error-line"/>
+    <text x="846" y="809" class="mono terminal-text terminal-error">FAIL  src/auth/policy.py (tear 3)</text>
+    <rect x="840" y="812" width="670" height="15" rx="3" class="term-error-line"/>
+    <text x="846" y="824" class="mono terminal-text terminal-error">  - directory requires tear 0, file is tear 3</text>
+    <text x="846" y="839" class="mono terminal-text terminal-text"></text>
+    <text x="846" y="854" class="mono terminal-text terminal-error">1 file checked, 1 failure, 0 warnings</text>
+  </g>
+</svg>
