@@ -60,7 +60,6 @@ def _discover_fixtures() -> list[object]:
 def test_xfail_fixtures_are_strict() -> None:
     """Future-behavior fixtures must fail as XPASS once their snapshots match."""
     fixture_params = [cast(Any, p) for p in _discover_fixtures() if not isinstance(p, str)]
-    assert fixture_params
 
     for fixture_param in fixture_params:
         xfail_marks = [mark for mark in fixture_param.marks if mark.name == "xfail"]

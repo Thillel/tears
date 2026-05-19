@@ -1,1 +1,0 @@
-TypeScript side-effect imports are not discovered until TypeScript scanner support exists.

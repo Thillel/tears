@@ -296,6 +296,10 @@ def test_init_creates_config_without_tagging_files(
         "max_tear = 3\n"
         "respect_gitignore = true\n"
         "\n"
+        "# Supported languages: c, cpp, csharp, dart, go, java, javascript, kotlin, "
+        "php, python, ruby, rust, typescript\n"
+        'languages = ["python"]\n'
+        "\n"
         "# Soft trial mode: existing files without @tear headers are treated as reviewed.\n"
         "# Full adoption:\n"
         "#   1. Run: tears set . --tear 1 --missing-only\n"

@@ -51,9 +51,12 @@ COMMENT_STYLES: dict[str, CommentStyle] = {
     ".cxx": ("//", None),
     ".h": ("//", None),
     ".hpp": ("//", None),
+    ".hh": ("//", None),
+    ".hxx": ("//", None),
     ".cs": ("//", None),
     ".scala": ("//", None),
     ".dart": ("//", None),
+    ".php": ("//", None),
     ".zig": ("//", None),
     # Double-dash line comment
     ".sql": ("--", None),

@@ -1,2 +1,4 @@
+languages = ["go"]
+
 [imports]
 source_roots = ["src"]

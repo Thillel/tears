@@ -1,2 +1,4 @@
+languages = ["csharp"]
+
 [imports]
 source_roots = ["src"]

@@ -1,1 +1,0 @@
-TypeScript import type dependencies are not discovered until TypeScript scanner support exists.

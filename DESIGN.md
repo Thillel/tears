@@ -45,7 +45,8 @@ The current module layout is deliberately small:
 | --- | --- |
 | `cli.py` | argparse and command dispatch |
 | `config.py` | `.tears.toml` parsing and validation |
-| `header.py` | Python `@tear` header parsing |
+| `header.py` | `@tear` header parsing |
+| `languages.py` | supported-language and file-suffix metadata |
 | `styles.py` | comment styles for hook insertion |
 | `mutate.py` | shared header mutation primitives |
 | `hook.py` | shared AI-tool hook entry point |
@@ -54,26 +55,28 @@ The current module layout is deliberately small:
 | `checker.py` | composes rules over an import graph |
 | `scan.py` | scan orchestration and text reporting |
 | `graph/__init__.py` | `ImportGraph` protocol |
-| `graph/grimp_builder.py` | current grimp-backed Python package graph |
+| `graph/file_graph.py` | in-memory file graph |
+| `graph/tree_sitter_builder.py` | public tree-sitter graph entry point |
+| `graph/tree_sitter_scan/` | tree-sitter discovery, extraction, and resolution |
+| `graph/grimp_builder.py` | retained grimp-backed Python package graph |
 
 The important boundary is `ImportGraph`. The checker does not care how imports are
-discovered. This should allow an AST/file-walking builder to be added without changing
-the core rule logic.
+discovered, which keeps scanner backends separate from tier policy.
 
 ## Current Scanner
 
-The current scanner uses grimp:
+The current scanner uses a tree-sitter-backed file graph:
 
 1. Load `.tears.toml`.
-2. Discover Python packages under configured `imports.source_roots`.
-3. Build a grimp import graph.
-4. Map modules back to source files.
+2. Discover enabled-language source files under configured `imports.source_roots`.
+3. Parse each file with its tree-sitter grammar.
+4. Resolve conservative local import edges.
 5. Parse `@tear` headers.
 6. Apply directory and import rules.
 7. Format a human-readable report.
 
-This is good for package import semantics, but it means discovery is limited by package
-layout. Flat scripts and namespace packages are a known gap.
+The default language set is `["python"]`. Other supported languages opt in through
+`languages`. The grimp builder remains in the codebase while tree-sitter parity settles.
 
 The optional CLI path is currently a scan root, not a target filter. For example,
 `tears some/repo` loads configuration from `some/repo` and scans from there. It does
@@ -163,10 +166,8 @@ expectations, and unusual tear values. Excluding those fixture trees from both s
 header marking is part of the test design, not an escape hatch from dogfooding. The
 snapshot diff is the review surface for fixture behavior.
 
-The current fixture suites include Python fixtures for implemented behavior and
-non-Python fixtures for desired future behavior. These future fixtures document import
-forms later scanners should resolve; they do not imply current non-Python scanner
-support.
+The current fixture suites include Python fixtures and opt-in multi-language fixtures.
+Fixture `.tears.toml` files set `languages` explicitly when the mini-repo is not Python.
 
 `.notears` files in fixture trees are human-readable markers. They document that a tree
 is intentionally outside normal repo reviewedness policy, but `tears` does not enforce

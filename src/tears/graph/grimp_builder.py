@@ -21,7 +21,7 @@ import grimp
 
 from tears.config import TearsConfig
 from tears.exclude import should_skip_path
-from tears.header import parse_tear_level
+from tears.header import parse_tear_level_for_path
 
 
 class GrimpImportGraph:
@@ -103,7 +103,11 @@ def build_grimp_graph(repo_root: Path, config: TearsConfig) -> GrimpImportGraph:
             respect_gitignore=config.respect_gitignore_for_scan(),
         ):
             continue
-        files[file_path] = parse_tear_level(file_path.read_text(), max_tear=config.max_tear)
+        files[file_path] = parse_tear_level_for_path(
+            file_path,
+            file_path.read_text(),
+            max_tear=config.max_tear,
+        )
 
     imports: dict[Path, set[Path]] = {f: set() for f in files}
     importers: dict[Path, set[Path]] = {f: set() for f in files}

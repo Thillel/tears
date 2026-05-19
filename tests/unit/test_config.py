@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 
 from tears.config import ConfigError, TearsConfig, load_config
+from tears.languages import SUPPORTED_LANGUAGES
 
 
 def test_defaults() -> None:
@@ -20,6 +21,7 @@ def test_defaults() -> None:
     assert cfg.scan_respect_gitignore is None
     assert cfg.mutate_respect_gitignore is None
     assert cfg.source_roots == ["."]
+    assert cfg.languages == ["python"]
     assert cfg.import_rules is None
     assert cfg.missing_header == "warn"
 
@@ -32,6 +34,7 @@ def test_load_toml(tmp_path: Path) -> None:
     (tmp_path / ".tears.toml").write_text(
         "max_tear = 5\n"
         'exclude = ["**/*.generated.py"]\n'
+        'languages = ["python", "typescript"]\n'
         "respect_gitignore = false\n"
         'missing_header = "error"\n'
         "\n"
@@ -72,6 +75,7 @@ def test_load_toml(tmp_path: Path) -> None:
     assert cfg.respect_gitignore_for_scan() is True
     assert cfg.respect_gitignore_for_mutation() is False
     assert cfg.source_roots == ["src"]
+    assert cfg.languages == ["python", "typescript"]
     assert cfg.import_rules == {1: 2}
     assert cfg.missing_header == "error"
 
@@ -169,6 +173,17 @@ def test_consumer_specific_excludes_must_be_string_lists(tmp_path: Path) -> None
 
     with pytest.raises(ConfigError, match=r"scan\.exclude entries must be strings"):
         load_config(tmp_path)
+
+
+def test_languages_must_be_supported(tmp_path: Path) -> None:
+    (tmp_path / ".tears.toml").write_text('languages = ["python", "madeup"]\n')
+
+    with pytest.raises(ConfigError) as exc_info:
+        load_config(tmp_path)
+    message = str(exc_info.value)
+    assert "unsupported language 'madeup'" in message
+    for language in SUPPORTED_LANGUAGES:
+        assert language in message
 
 
 def test_respect_gitignore_must_be_bool(tmp_path: Path) -> None:

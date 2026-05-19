@@ -1,2 +1,4 @@
+languages = ["java"]
+
 [imports]
 source_roots = ["src"]

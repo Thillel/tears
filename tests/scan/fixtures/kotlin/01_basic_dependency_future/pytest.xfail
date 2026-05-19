@@ -1,1 +1,0 @@
-Kotlin package and alias imports are not discovered until tree-sitter-backed scanner support exists.

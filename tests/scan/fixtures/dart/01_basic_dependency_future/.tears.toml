@@ -1,2 +1,4 @@
+languages = ["dart"]
+
 [imports]
 source_roots = ["src"]

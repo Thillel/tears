@@ -1,2 +1,4 @@
+languages = ["kotlin"]
+
 [imports]
 source_roots = ["src"]

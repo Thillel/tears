@@ -1,2 +1,4 @@
+languages = ["php"]
+
 [imports]
 source_roots = ["src"]
